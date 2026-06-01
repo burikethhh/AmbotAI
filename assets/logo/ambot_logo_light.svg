@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Leg gradient: dark to medium grey -->
+    <linearGradient id="leg-grad-lt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3A3A3A;stop-opacity:1" />
+    </linearGradient>
+    <!-- Subtle radial for light bg depth -->
+    <radialGradient id="bg-light-depth" cx="50%" cy="40%" r="55%" fx="50%" fy="38%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#F5F5F5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EBEBEB;stop-opacity:1" />
+    </radialGradient>
+    <!-- Accent glow for apex -->
+    <radialGradient id="apex-glow-lt" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#1A1A1A;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#1A1A1A;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background circle — subtle gradient depth -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg-light-depth)" />
+
+  <!-- Outer hexagonal frame — heavier for scalability -->
+  <polygon
+    points="256,76 406,152 406,308 256,384 106,308 106,152"
+    fill="none"
+    stroke="#1A1A1A"
+    stroke-width="5"
+    opacity="0.08"
+  />
+
+  <!-- Geometric "A" — aligned to hex lower vertices -->
+  <line x1="120" y1="312" x2="256" y2="90" stroke="url(#leg-grad-lt)" stroke-width="14" stroke-linecap="round" />
+  <line x1="392" y1="312" x2="256" y2="90" stroke="url(#leg-grad-lt)" stroke-width="14" stroke-linecap="round" />
+  <line x1="176" y1="220" x2="336" y2="220" stroke="url(#leg-grad-lt)" stroke-width="10" stroke-linecap="round" />
+
+  <!-- Apex glow -->
+  <circle cx="256" cy="90" r="28" fill="url(#apex-glow-lt)" />
+
+  <!-- Neural nodes — monochrome -->
+  <circle cx="256" cy="90" r="12" fill="#1A1A1A" />
+  <circle cx="176" cy="220" r="7" fill="#1A1A1A" opacity="0.6" />
+  <circle cx="336" cy="220" r="7" fill="#1A1A1A" opacity="0.6" />
+  <circle cx="120" cy="312" r="6" fill="#1A1A1A" opacity="0.3" />
+  <circle cx="392" cy="312" r="6" fill="#1A1A1A" opacity="0.3" />
+
+  <!-- Neural branches — heavier strokes -->
+  <line x1="256" y1="90" x2="190" y2="136" stroke="#1A1A1A" stroke-width="2.5" opacity="0.2" />
+  <line x1="256" y1="90" x2="322" y2="136" stroke="#1A1A1A" stroke-width="2.5" opacity="0.2" />
+  <circle cx="190" cy="136" r="5" fill="#1A1A1A" opacity="0.2" />
+  <circle cx="322" cy="136" r="5" fill="#1A1A1A" opacity="0.2" />
+
+  <line x1="176" y1="220" x2="134" y2="196" stroke="#1A1A1A" stroke-width="2.5" opacity="0.14" />
+  <line x1="336" y1="220" x2="378" y2="196" stroke="#1A1A1A" stroke-width="2.5" opacity="0.14" />
+  <circle cx="134" cy="196" r="5" fill="#1A1A1A" opacity="0.14" />
+  <circle cx="378" cy="196" r="5" fill="#1A1A1A" opacity="0.14" />
+
+  <!-- Cross-connections -->
+  <line x1="190" y1="136" x2="134" y2="196" stroke="#1A1A1A" stroke-width="2" opacity="0.08" />
+  <line x1="322" y1="136" x2="378" y2="196" stroke="#1A1A1A" stroke-width="2" opacity="0.08" />
+</svg>

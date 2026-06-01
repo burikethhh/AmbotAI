@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "build": 1,
+  "releaseDate": "2026-06-01",
+  "updateUrl": "https://github.com/burikethhh/ambot-ai/releases/tag/v1.0.0",
+  "changelog": "Initial release of Ambot AI.\n\n- General chat with NVIDIA LLM and local models\n- AI role personas\n- Cloud image generation via NVIDIA FLUX\n- Document generation (PDF/DOCX export)\n- Text-to-speech with AI preprocessing\n- On-device memory system\n- Brutalist UI design"
+}

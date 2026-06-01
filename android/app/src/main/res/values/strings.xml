@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Ambot AI uses this service to read your screen and perform actions on your behalf, such as opening apps, tapping buttons, and typing text. All processing happens on your device. Ambot never sends screen content to any server.</string>
+    <string name="screen_capture_notification_title">Ambot AI Screen Capture</string>
+    <string name="screen_capture_notification_text">Ambot is capturing your screen to assist you.</string>
+</resources>

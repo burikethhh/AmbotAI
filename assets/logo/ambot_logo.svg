@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Leg gradient: white to light grey -->
+    <linearGradient id="leg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B0B0B0;stop-opacity:1" />
+    </linearGradient>
+    <!-- Radial gradient for premium depth on background -->
+    <radialGradient id="bg-depth" cx="50%" cy="40%" r="55%" fx="50%" fy="38%">
+      <stop offset="0%" style="stop-color:#2A2A2A;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#1A1A1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111111;stop-opacity:1" />
+    </radialGradient>
+    <!-- Accent glow for apex node -->
+    <radialGradient id="apex-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.25" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background circle — radial gradient for depth -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg-depth)" />
+
+  <!-- Outer hexagonal frame — A legs aligned to lower vertices -->
+  <!-- Hex vertices: T(256,76) UR(406,152) LR(406,308) B(256,384) LL(106,308) UL(106,152) -->
+  <polygon
+    points="256,76 406,152 406,308 256,384 106,308 106,152"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="5"
+    opacity="0.12"
+  />
+
+  <!-- Geometric "A" — legs aligned to hex lower vertices -->
+  <!-- Apex: (256,90) near hex top; Feet: (120,312)/(392,312) on hex lower edges -->
+  <!-- Left leg -->
+  <line x1="120" y1="312" x2="256" y2="90" stroke="url(#leg-grad)" stroke-width="14" stroke-linecap="round" />
+  <!-- Right leg -->
+  <line x1="392" y1="312" x2="256" y2="90" stroke="url(#leg-grad)" stroke-width="14" stroke-linecap="round" />
+  <!-- Crossbar -->
+  <line x1="176" y1="220" x2="336" y2="220" stroke="url(#leg-grad)" stroke-width="10" stroke-linecap="round" />
+
+  <!-- Apex glow — subtle halo behind the top node -->
+  <circle cx="256" cy="90" r="28" fill="url(#apex-glow)" />
+
+  <!-- Neural nodes — monochrome -->
+  <!-- Top apex -->
+  <circle cx="256" cy="90" r="12" fill="#FFFFFF" />
+  <!-- Left crossbar node -->
+  <circle cx="176" cy="220" r="7" fill="#FFFFFF" opacity="0.6" />
+  <!-- Right crossbar node -->
+  <circle cx="336" cy="220" r="7" fill="#FFFFFF" opacity="0.6" />
+  <!-- Bottom left foot -->
+  <circle cx="120" cy="312" r="6" fill="#FFFFFF" opacity="0.3" />
+  <!-- Bottom right foot -->
+  <circle cx="392" cy="312" r="6" fill="#FFFFFF" opacity="0.3" />
+
+  <!-- Neural branches — increased weight for scalability -->
+  <!-- From apex outward -->
+  <line x1="256" y1="90" x2="190" y2="136" stroke="#FFFFFF" stroke-width="2.5" opacity="0.2" />
+  <line x1="256" y1="90" x2="322" y2="136" stroke="#FFFFFF" stroke-width="2.5" opacity="0.2" />
+  <circle cx="190" cy="136" r="5" fill="#FFFFFF" opacity="0.2" />
+  <circle cx="322" cy="136" r="5" fill="#FFFFFF" opacity="0.2" />
+
+  <!-- From crossbar nodes outward -->
+  <line x1="176" y1="220" x2="134" y2="196" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" />
+  <line x1="336" y1="220" x2="378" y2="196" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" />
+  <circle cx="134" cy="196" r="5" fill="#FFFFFF" opacity="0.15" />
+  <circle cx="378" cy="196" r="5" fill="#FFFFFF" opacity="0.15" />
+
+  <!-- Cross-connections — secondary neural web -->
+  <line x1="190" y1="136" x2="134" y2="196" stroke="#FFFFFF" stroke-width="2" opacity="0.08" />
+  <line x1="322" y1="136" x2="378" y2="196" stroke="#FFFFFF" stroke-width="2" opacity="0.08" />
+</svg>

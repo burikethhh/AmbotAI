@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Background depth -->
+    <radialGradient id="bg-depth" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#222222;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111111;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Surface gradients for the cube -->
+    <!-- Top face (lightest) -->
+    <linearGradient id="cube-top" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D0D0D0;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Left face (mid tone) -->
+    <linearGradient id="cube-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#999999;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#666666;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Right face (darkest) -->
+    <linearGradient id="cube-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#444444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#222222;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Edge glow -->
+    <linearGradient id="edge-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0.1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="72" fill="url(#bg-depth)" />
+
+  <!-- Isometric Cube Base -->
+  <g transform="translate(0, 16)">
+    <!-- Top Face -->
+    <polygon points="256,120 384,194 256,268 128,194" fill="url(#cube-top)" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" />
+    
+    <!-- Left Face -->
+    <polygon points="128,194 256,268 256,416 128,342" fill="url(#cube-left)" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" />
+    
+    <!-- Right Face -->
+    <polygon points="384,194 256,268 256,416 384,342" fill="url(#cube-right)" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" />
+    
+    <!-- Core AI Node (Floating above center) -->
+    <circle cx="256" cy="194" r="16" fill="#111111" stroke="#FFFFFF" stroke-width="6" />
+    
+    <!-- Inner structural lines (Brutalist tech feel) -->
+    <line x1="256" y1="268" x2="256" y2="416" stroke="#111111" stroke-width="8" stroke-linecap="round" />
+    <line x1="128" y1="194" x2="256" y2="268" stroke="#111111" stroke-width="8" stroke-linecap="round" />
+    <line x1="384" y1="194" x2="256" y2="268" stroke="#111111" stroke-width="8" stroke-linecap="round" />
+    
+    <!-- Data slot / Eye on left face -->
+    <polygon points="160,250 224,286 224,310 160,274" fill="#111111" />
+    <circle cx="192" cy="280" r="4" fill="#FFFFFF" />
+    
+    <!-- Data slot / Eye on right face -->
+    <polygon points="352,250 288,286 288,310 352,274" fill="#111111" />
+    <circle cx="320" cy="280" r="4" fill="#FFFFFF" />
+  </g>
+</svg>

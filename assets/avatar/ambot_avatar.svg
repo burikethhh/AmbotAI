@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <!-- Top face (lightest) -->
+    <linearGradient id="cube-top" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D0D0D0;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Left face (mid tone) -->
+    <linearGradient id="cube-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#999999;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#666666;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Right face (darkest) -->
+    <linearGradient id="cube-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#444444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#222222;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Isometric Cube Base -->
+  <g transform="translate(0, 8)">
+    <!-- Top Face -->
+    <polygon points="128,60 192,97 128,134 64,97" fill="url(#cube-top)" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />
+    
+    <!-- Left Face -->
+    <polygon points="64,97 128,134 128,208 64,171" fill="url(#cube-left)" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />
+    
+    <!-- Right Face -->
+    <polygon points="192,97 128,134 128,208 192,171" fill="url(#cube-right)" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />
+    
+    <!-- Core AI Node (Floating above center) -->
+    <circle cx="128" cy="97" r="8" fill="#111111" stroke="#FFFFFF" stroke-width="3" />
+    
+    <!-- Inner structural lines -->
+    <line x1="128" y1="134" x2="128" y2="208" stroke="#111111" stroke-width="4" stroke-linecap="round" />
+    <line x1="64" y1="97" x2="128" y2="134" stroke="#111111" stroke-width="4" stroke-linecap="round" />
+    <line x1="192" y1="97" x2="128" y2="134" stroke="#111111" stroke-width="4" stroke-linecap="round" />
+    
+    <!-- Data slot / Eye on left face -->
+    <polygon points="80,125 112,143 112,155 80,137" fill="#111111" />
+    <circle cx="96" cy="140" r="2" fill="#FFFFFF" />
+    
+    <!-- Data slot / Eye on right face -->
+    <polygon points="176,125 144,143 144,155 176,137" fill="#111111" />
+    <circle cx="160" cy="140" r="2" fill="#FFFFFF" />
+  </g>
+</svg>

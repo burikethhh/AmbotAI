@@ -1,0 +1,318 @@
+import 'action.dart';
+
+/// Registry of all available device actions, categorized by risk and
+/// domain. The AI selects actions from this registry when the user
+/// requests device control.
+///
+/// Each action defines:
+///   - A unique id for the AI to reference
+///   - The native method to call
+///   - Required parameters and their types
+///   - Risk level for the execution mode guardrails
+class ActionRegistry {
+  ActionRegistry._();
+
+  static final List<DeviceAction> all = [
+    // --- SAFE Actions ---
+    DeviceAction(
+      id: 'launch_app',
+      label: 'Launch App',
+      description: 'Open an app by name or package.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.appLaunch,
+      method: 'launchApp',
+      params: {'packageName': '', 'activity': ''},
+      confirmationMessage: 'Open {label}?',
+    ),
+    DeviceAction(
+      id: 'open_url',
+      label: 'Open URL',
+      description: 'Open a URL in the default browser.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.navigation,
+      method: 'openUrl',
+      params: {'url': ''},
+      confirmationMessage: 'Open {url} in browser?',
+    ),
+    DeviceAction(
+      id: 'web_search',
+      label: 'Web Search',
+      description: 'Search the web using the default search engine.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.navigation,
+      method: 'webSearch',
+      params: {'query': ''},
+      confirmationMessage: 'Search the web for "{query}"?',
+    ),
+    DeviceAction(
+      id: 'set_alarm',
+      label: 'Set Alarm',
+      description: 'Create a new alarm at the specified time.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.calendar,
+      method: 'setAlarm',
+      params: {'hour': 0, 'minute': 0, 'label': ''},
+      confirmationMessage: 'Set alarm for {hour}:{minute}?',
+    ),
+    DeviceAction(
+      id: 'set_timer',
+      label: 'Set Timer',
+      description: 'Start a countdown timer.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.calendar,
+      method: 'setTimer',
+      params: {'seconds': 0},
+      confirmationMessage: 'Start timer for {seconds} seconds?',
+    ),
+    DeviceAction(
+      id: 'toggle_wifi',
+      label: 'Toggle WiFi',
+      description: 'Turn WiFi on or off.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.systemSettings,
+      method: 'toggleSetting',
+      params: {'setting': 'wifi', 'value': true},
+      confirmationMessage: 'Turn WiFi {value}?',
+    ),
+    DeviceAction(
+      id: 'toggle_bluetooth',
+      label: 'Toggle Bluetooth',
+      description: 'Turn Bluetooth on or off.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.systemSettings,
+      method: 'toggleSetting',
+      params: {'setting': 'bluetooth', 'value': true},
+      confirmationMessage: 'Turn Bluetooth {value}?',
+    ),
+    DeviceAction(
+      id: 'toggle_flashlight',
+      label: 'Toggle Flashlight',
+      description: 'Turn the flashlight on or off.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.systemSettings,
+      method: 'toggleSetting',
+      params: {'setting': 'flashlight', 'value': true},
+      confirmationMessage: 'Turn flashlight {value}?',
+    ),
+    DeviceAction(
+      id: 'set_volume',
+      label: 'Set Volume',
+      description: 'Adjust the system volume level.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.media,
+      method: 'setVolume',
+      params: {'stream': 'media', 'level': 50},
+      confirmationMessage: 'Set {stream} volume to {level}%?',
+    ),
+    DeviceAction(
+      id: 'set_brightness',
+      label: 'Set Brightness',
+      description: 'Adjust the screen brightness level.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.systemSettings,
+      method: 'setBrightness',
+      params: {'level': 50},
+      confirmationMessage: 'Set brightness to {level}%?',
+    ),
+    DeviceAction(
+      id: 'read_screen',
+      label: 'Read Screen',
+      description: 'Extract all text from the current screen.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.screenCapture,
+      method: 'readScreen',
+      params: {},
+      confirmationMessage: 'Read the current screen content?',
+    ),
+    DeviceAction(
+      id: 'copy_to_clipboard',
+      label: 'Copy to Clipboard',
+      description: 'Copy text to the system clipboard.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.clipboard,
+      method: 'copyToClipboard',
+      params: {'text': ''},
+      confirmationMessage: 'Copy text to clipboard?',
+    ),
+    DeviceAction(
+      id: 'create_calendar_event',
+      label: 'Create Calendar Event',
+      description: 'Add a new event to the calendar.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.calendar,
+      method: 'createCalendarEvent',
+      params: {'title': '', 'startTime': '', 'endTime': '', 'description': ''},
+      confirmationMessage: 'Create event "{title}"?',
+    ),
+    DeviceAction(
+      id: 'take_screenshot',
+      label: 'Take Screenshot',
+      description: 'Capture the current screen as an image.',
+      risk: ActionRisk.safe,
+      category: ActionCategory.screenCapture,
+      method: 'takeScreenshot',
+      params: {},
+      confirmationMessage: 'Take a screenshot?',
+    ),
+
+    // --- MODERATE Actions ---
+    DeviceAction(
+      id: 'send_sms',
+      label: 'Send SMS',
+      description: 'Send a text message to a contact.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.communication,
+      method: 'sendSms',
+      params: {'recipient': '', 'message': ''},
+      confirmationMessage: 'Send SMS to {recipient}?',
+    ),
+    DeviceAction(
+      id: 'send_email',
+      label: 'Send Email',
+      description: 'Send an email with subject and body.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.communication,
+      method: 'sendEmail',
+      params: {'to': '', 'subject': '', 'body': ''},
+      confirmationMessage: 'Send email to {to} with subject "{subject}"?',
+    ),
+    DeviceAction(
+      id: 'create_note',
+      label: 'Create Note',
+      description: 'Create a note in the default notes app.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.fileOperation,
+      method: 'createNote',
+      params: {'title': '', 'content': ''},
+      confirmationMessage: 'Create note "{title}"?',
+    ),
+    DeviceAction(
+      id: 'install_app',
+      label: 'Install App',
+      description: 'Open the Play Store page for an app.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.appLaunch,
+      method: 'openPlayStore',
+      params: {'packageName': ''},
+      confirmationMessage: 'Open Play Store for {packageName}?',
+    ),
+    DeviceAction(
+      id: 'toggle_dnd',
+      label: 'Toggle Do Not Disturb',
+      description: 'Enable or disable Do Not Disturb mode.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.systemSettings,
+      method: 'toggleSetting',
+      params: {'setting': 'dnd', 'value': true},
+      confirmationMessage: 'Turn Do Not Disturb {value}?',
+    ),
+    DeviceAction(
+      id: 'navigate_in_app',
+      label: 'Navigate In App',
+      description: 'Navigate to a specific screen within the current app.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.navigation,
+      method: 'navigateInApp',
+      params: {'target': ''},
+      confirmationMessage: 'Navigate to {target}?',
+    ),
+    DeviceAction(
+      id: 'tap_element',
+      label: 'Tap Element',
+      description: 'Tap a UI element identified by text or coordinates.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.navigation,
+      method: 'tapElement',
+      params: {'text': '', 'x': 0, 'y': 0},
+      confirmationMessage: 'Tap on "{text}"?',
+    ),
+    DeviceAction(
+      id: 'type_text',
+      label: 'Type Text',
+      description: 'Type text into the currently focused input field.',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.navigation,
+      method: 'typeText',
+      params: {'text': ''},
+      confirmationMessage: 'Type "{text}"?',
+    ),
+
+    // --- DANGEROUS Actions ---
+    DeviceAction(
+      id: 'delete_file',
+      label: 'Delete File',
+      description: 'Delete a file from the device.',
+      risk: ActionRisk.dangerous,
+      category: ActionCategory.fileOperation,
+      method: 'deleteFile',
+      params: {'path': ''},
+      confirmationMessage: 'DELETE {path}? This cannot be undone.',
+      canUndo: false,
+    ),
+    DeviceAction(
+      id: 'delete_message',
+      label: 'Delete Message',
+      description: 'Delete a message or conversation.',
+      risk: ActionRisk.dangerous,
+      category: ActionCategory.communication,
+      method: 'deleteMessage',
+      params: {'conversation': '', 'messageId': ''},
+      confirmationMessage: 'DELETE this message? This cannot be undone.',
+      canUndo: false,
+    ),
+    DeviceAction(
+      id: 'delete_contact',
+      label: 'Delete Contact',
+      description: 'Delete a contact from the address book.',
+      risk: ActionRisk.dangerous,
+      category: ActionCategory.communication,
+      method: 'deleteContact',
+      params: {'contactId': ''},
+      confirmationMessage: 'DELETE this contact? This cannot be undone.',
+      canUndo: false,
+    ),
+    DeviceAction(
+      id: 'clear_app_data',
+      label: 'Clear App Data',
+      description: 'Clear all data for a specific app.',
+      risk: ActionRisk.dangerous,
+      category: ActionCategory.appLaunch,
+      method: 'clearAppData',
+      params: {'packageName': ''},
+      confirmationMessage: 'CLEAR all data for {packageName}? This cannot be undone.',
+      canUndo: false,
+    ),
+    DeviceAction(
+      id: 'uninstall_app',
+      label: 'Uninstall App',
+      description: 'Uninstall an app from the device.',
+      risk: ActionRisk.dangerous,
+      category: ActionCategory.appLaunch,
+      method: 'uninstallApp',
+      params: {'packageName': ''},
+      confirmationMessage: 'UNINSTALL {packageName}? This cannot be undone.',
+      canUndo: false,
+    ),
+  ];
+
+  /// Get all actions at a specific risk level.
+  static List<DeviceAction> byRisk(ActionRisk risk) =>
+      all.where((a) => a.risk == risk).toList();
+
+  /// Get all actions in a specific category.
+  static List<DeviceAction> byCategory(ActionCategory category) =>
+      all.where((a) => a.category == category).toList();
+
+  /// Look up an action by its id.
+  static DeviceAction? byId(String id) {
+    try {
+      return all.firstWhere((a) => a.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Actions the AI can reference by name in its responses.
+  static Map<String, DeviceAction> get byName =>
+      {for (final a in all) a.id: a};
+}

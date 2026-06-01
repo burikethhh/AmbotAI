@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" fill="none">
+  <defs>
+    <!-- Leg gradient for wordmark icon -->
+    <linearGradient id="wm-leg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B0B0B0;stop-opacity:1" />
+    </linearGradient>
+    <!-- Radial depth for icon bg -->
+    <radialGradient id="wm-bg" cx="50%" cy="40%" r="55%" fx="50%" fy="38%">
+      <stop offset="0%" style="stop-color:#2A2A2A;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#1A1A1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111111;stop-opacity:1" />
+    </radialGradient>
+    <!-- Apex glow -->
+    <radialGradient id="wm-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.25" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Logo mark (small) — refined geometry -->
+  <g transform="translate(20, 16) scale(0.33)">
+    <!-- Background with depth -->
+    <circle cx="256" cy="256" r="240" fill="url(#wm-bg)" />
+    <!-- Hex frame — heavier -->
+    <polygon points="256,76 406,152 406,308 256,384 106,308 106,152" fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.12" />
+    <!-- A — aligned to hex -->
+    <line x1="120" y1="312" x2="256" y2="90" stroke="url(#wm-leg)" stroke-width="14" stroke-linecap="round" />
+    <line x1="392" y1="312" x2="256" y2="90" stroke="url(#wm-leg)" stroke-width="14" stroke-linecap="round" />
+    <line x1="176" y1="220" x2="336" y2="220" stroke="url(#wm-leg)" stroke-width="10" stroke-linecap="round" />
+    <!-- Apex glow -->
+    <circle cx="256" cy="90" r="28" fill="url(#wm-glow)" />
+    <!-- Nodes — monochrome -->
+    <circle cx="256" cy="90" r="12" fill="#FFFFFF" />
+    <circle cx="176" cy="220" r="7" fill="#FFFFFF" opacity="0.65" />
+    <circle cx="336" cy="220" r="7" fill="#FFFFFF" opacity="0.65" />
+    <circle cx="120" cy="312" r="6" fill="#FFFFFF" opacity="0.35" />
+    <circle cx="392" cy="312" r="6" fill="#FFFFFF" opacity="0.35" />
+    <!-- Branches -->
+    <line x1="256" y1="90" x2="190" y2="136" stroke="#FFFFFF" stroke-width="2.5" opacity="0.25" />
+    <line x1="256" y1="90" x2="322" y2="136" stroke="#FFFFFF" stroke-width="2.5" opacity="0.25" />
+    <circle cx="190" cy="136" r="5" fill="#FFFFFF" opacity="0.25" />
+    <circle cx="322" cy="136" r="5" fill="#FFFFFF" opacity="0.25" />
+  </g>
+
+  <!-- Wordmark -->
+  <text x="220" y="118" font-family="'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="300" letter-spacing="12" fill="#FFFFFF">
+    AMBOT
+  </text>
+  <!-- "AI" subtitle -->
+  <text x="220" y="158" font-family="'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="200" letter-spacing="18" fill="#FFFFFF" opacity="0.7">
+    AI
+  </text>
+</svg>
