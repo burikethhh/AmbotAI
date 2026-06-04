@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/ai/capability_detector.dart';
 import '../../core/ai/engine_selector.dart';
 import '../../core/ai/model_registry.dart';
-import '../../core/providers/api_key_providers.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/daily_limit_tracker.dart';
 import '../../shared/theme/app_colors.dart';
@@ -196,6 +195,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
+          // How It Works guide
+          AppSection(
+            title: 'HOW IT WORKS',
+            child: AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GuideRow(
+                    icon: Icons.cloud_outlined,
+                    title: 'Cloud AI (Built-in)',
+                    body: 'Ambot AI comes with free built-in NVIDIA cloud AI keys. '
+                        'No account or setup needed — just connect to the internet and start using '
+                        'the app. This is the quickest way to get started.\n\n'
+                        'Works for: Chat, Image Generation (NVIDIA FLUX).\n'
+                        'Requires: Internet connection.',
+                    isActive: modeLabel.startsWith('CLOUD'),
+                    textPrimary: c.textPrimary,
+                    textSecondary: c.textSecondary,
+                    borderColor: c.borderColor,
+                    cardColor: c.cardColor,
+                  ),
+                  const SizedBox(height: 12),
+                  _GuideRow(
+                    icon: Icons.phone_android,
+                    title: 'Local AI (Offline)',
+                    body: 'Download a GGUF model to run entirely on your device. '
+                        'No internet needed after download. Your data never leaves your phone.\n\n'
+                        'Works for: Chat (chosen model), Image Generation (Stable Diffusion).\n'
+                        'Requires: ~500 MB–2 GB storage, 4+ GB RAM.',
+                    isActive: modeLabel.startsWith('OFFLINE'),
+                    textPrimary: c.textPrimary,
+                    textSecondary: c.textSecondary,
+                    borderColor: c.borderColor,
+                    cardColor: c.cardColor,
+                  ),
+                  const SizedBox(height: 12),
+                  _HowItWorksFooter(
+                    textPrimary: c.textPrimary,
+                    textSecondary: c.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // AI Model section
           AppSection(
             title: 'AI MODEL',
@@ -220,7 +264,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Image Generation Models section
           AppSection(title: 'IMAGE GENERATION', child: _ImageModelSection(
             remainingToday: _imageRemainingToday,
-            dailyLimit: 3,
+            dailyLimit: 10,
           )),
 
           // API Keys section
@@ -330,6 +374,107 @@ class _CloudProviderSelector extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _GuideRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  final bool isActive;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color borderColor;
+  final Color cardColor;
+
+  const _GuideRow({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.isActive,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.borderColor,
+    required this.cardColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isActive
+              ? (ThemeColors.of(context).accent)
+              : borderColor,
+          width: isActive ? 2 : 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: textSecondary),
+              const SizedBox(width: 8),
+              Text(title, style: AppTypography.labelMedium(textPrimary)),
+              if (isActive) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: ThemeColors.of(context).accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text('ACTIVE',
+                    style: AppTypography.labelMicro(ThemeColors.of(context).accent)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(body, style: AppTypography.bodySmall(textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HowItWorksFooter extends StatelessWidget {
+  final Color textPrimary;
+  final Color textSecondary;
+
+  const _HowItWorksFooter({
+    required this.textPrimary,
+    required this.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: (Theme.of(context).brightness == Brightness.dark
+            ? Colors.white : Colors.black).withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb_outline, size: 16, color: textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Tip: Download a local model AND stay connected to the internet — '
+              'the app will prefer the local model for speed and privacy, '
+              'and fall back to cloud AI for tasks the local model can\'t handle.',
+              style: AppTypography.labelSmall(textSecondary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

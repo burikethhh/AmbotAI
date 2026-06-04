@@ -103,7 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           AmbotAvatar(size: 96, isDark: c.isDark)
                         else
                           AppIcon(
-                            icon: page.icon!,
+                            icon: page.icon ?? Icons.auto_awesome,
                             size: 72,
                             backgroundColor: c.isDark
                                 ? AppColors.cardDarkElevated

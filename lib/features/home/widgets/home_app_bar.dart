@@ -9,6 +9,7 @@ class HomeAppBar extends StatelessWidget {
   final Color textPrimary;
   final Color textSecondary;
   final String subtitle;
+  final bool hasUpdate;
   final VoidCallback onMenuTap;
   final VoidCallback onHelpTap;
   final VoidCallback onSettingsTap;
@@ -20,6 +21,7 @@ class HomeAppBar extends StatelessWidget {
     required this.textPrimary,
     required this.textSecondary,
     required this.subtitle,
+    this.hasUpdate = false,
     required this.onMenuTap,
     required this.onHelpTap,
     required this.onSettingsTap,
@@ -42,7 +44,15 @@ class HomeAppBar extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: onMenuTap,
-                    child: Icon(Icons.menu, color: textSecondary, size: 24),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: textSecondary, width: 1.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Icon(Icons.menu, color: textSecondary, size: 18),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   GestureDetector(
@@ -79,10 +89,27 @@ class HomeAppBar extends StatelessWidget {
                   icon: Icon(Icons.help_outline, color: textSecondary),
                   tooltip: 'Quick Guide',
                 ),
-                IconButton(
-                  onPressed: onSettingsTap,
-                  icon: Icon(Icons.settings_outlined, color: textSecondary),
-                  tooltip: 'Settings',
+                Stack(
+                  children: [
+                    IconButton(
+                      onPressed: onSettingsTap,
+                      icon: Icon(Icons.settings_outlined, color: textSecondary),
+                      tooltip: 'Settings',
+                    ),
+                    if (hasUpdate)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF4444),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

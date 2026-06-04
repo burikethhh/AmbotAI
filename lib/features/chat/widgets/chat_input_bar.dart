@@ -16,6 +16,8 @@ class ChatInputBar extends StatelessWidget {
   final VoidCallback onVoice;
   final VoidCallback onImageGen;
   final VoidCallback onDocGen;
+  final VoidCallback onAttachImage;
+  final VoidCallback onAttachFile;
 
   const ChatInputBar({
     super.key,
@@ -31,6 +33,8 @@ class ChatInputBar extends StatelessWidget {
     required this.onVoice,
     required this.onImageGen,
     required this.onDocGen,
+    required this.onAttachImage,
+    required this.onAttachFile,
   });
 
   @override
@@ -68,6 +72,54 @@ class ChatInputBar extends StatelessWidget {
             ),
           Row(
             children: [
+              Semantics(
+                button: true,
+                label: 'Attach image',
+                child: GestureDetector(
+                  onTap: isDisabled ? null : onAttachImage,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: borderColor, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.photo_outlined,
+                      color: isDisabled
+                          ? (isDark ? AppColors.grey : AppColors.silver)
+                          : (isDark ? AppColors.silver : AppColors.grey),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              Semantics(
+                button: true,
+                label: 'Attach file',
+                child: GestureDetector(
+                  onTap: isDisabled ? null : onAttachFile,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: borderColor, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.attach_file_outlined,
+                      color: isDisabled
+                          ? (isDark ? AppColors.grey : AppColors.silver)
+                          : (isDark ? AppColors.silver : AppColors.grey),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
               Semantics(
                 button: true,
                 label: 'Generate image',

@@ -10,8 +10,11 @@ class StatusPanel extends StatelessWidget {
   final String statusMessage;
   final double trustScore;
   final bool hasPermission;
+  final bool hasNotificationPerm;
+  final bool hasOverlayPerm;
   final VoidCallback onDismissError;
   final VoidCallback onSetupPermission;
+  final VoidCallback? onRequestNotification;
   final AnimationController statusPulseController;
   final Color textSecondary;
 
@@ -23,8 +26,11 @@ class StatusPanel extends StatelessWidget {
     required this.statusMessage,
     required this.trustScore,
     required this.hasPermission,
+    this.hasNotificationPerm = true,
+    this.hasOverlayPerm = true,
     required this.onDismissError,
     required this.onSetupPermission,
+    this.onRequestNotification,
     required this.statusPulseController,
     required this.textSecondary,
   });
@@ -73,6 +79,11 @@ class StatusPanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
+              if (!hasNotificationPerm)
+                _permissionBadge(Icons.notifications_off_outlined, AppColors.warningOrange, onRequestNotification),
+              if (!hasOverlayPerm)
+                _permissionBadge(Icons.picture_in_picture_alt_outlined, AppColors.warningOrange, null),
               TrustBadge(score: trustScore, isDark: isDark),
             ],
           ),
@@ -125,6 +136,21 @@ class StatusPanel extends StatelessWidget {
             child: const Text('SETUP'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _permissionBadge(IconData icon, Color color, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Icon(icon, size: 14, color: color),
       ),
     );
   }

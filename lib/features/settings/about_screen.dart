@@ -62,7 +62,7 @@ class AboutScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             'Built around modular AI roles \u2014 each one a specialized assistant for a specific domain. '
-            'Install only what you need. Tutor, QuizMaker, DebatePartner, Commander, and more.',
+            'Install only what you need. Tutor, QuizMaker, DebatePartner, and more.',
             style: AppTypography.bodyMedium(c.textSecondary),
           ),
           const SizedBox(height: 12),
@@ -120,7 +120,7 @@ class AboutScreen extends ConsumerWidget {
           _FeatureItem(
             icon: Icons.computer_outlined,
             label: 'DEVICE CONTROL',
-            description: 'Commander role lets AI control your device safely.',
+            description: 'Agent Driven Environment — AI controls your device safely.',
             c: c,
           ),
 

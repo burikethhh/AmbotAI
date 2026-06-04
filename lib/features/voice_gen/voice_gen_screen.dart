@@ -75,6 +75,7 @@ class _VoiceGenScreenState extends ConsumerState<VoiceGenScreen> {
   void dispose() {
     _textController.dispose();
     _engine.dispose();
+    _voiceService.dispose();
     super.dispose();
   }
 
@@ -184,7 +185,7 @@ class _VoiceGenScreenState extends ConsumerState<VoiceGenScreen> {
         _loadVoiceModel();
         final audioPath = await _engine.generate(cleanText, rate: effectiveRate, pitch: effectivePitch);
         if (audioPath.isNotEmpty) {
-          setState(() => _generatedAudioPath = audioPath);
+          if (mounted) setState(() => _generatedAudioPath = audioPath);
           return;
         }
       }
@@ -232,13 +233,13 @@ class _VoiceGenScreenState extends ConsumerState<VoiceGenScreen> {
     }
     setState(() => _isPlaying = true);
     await AudioPlaybackService.play(_generatedAudioPath!);
-    setState(() => _isPlaying = false);
+    if (mounted) setState(() => _isPlaying = false);
   }
 
   Future<void> _stopPlayback() async {
     await AudioPlaybackService.stop();
     await _voiceService.stopSpeaking();
-    setState(() => _isPlaying = false);
+    if (mounted) setState(() => _isPlaying = false);
   }
 
   int _wordCount(String text) {

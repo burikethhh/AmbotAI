@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/ai/engine_selector.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/providers/update_providers.dart';
 import '../../core/roles/role.dart';
 import '../../core/services/haptic_feedback_service.dart';
+import '../../core/services/version_check_service.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
 import '../../shared/theme/app_spacing.dart';
-import '../../shared/widgets/app_icon.dart';
 import 'widgets/home_app_bar.dart';
 import 'widgets/home_quick_actions.dart';
 
@@ -65,6 +67,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final c = ref.watch(themeColorsProvider);
     final roles = ref.watch(rolesProvider);
     final installed = roles.where((r) => r.isInstalled).toList();
+    final updateAsync = ref.watch(updateCheckFutureProvider);
+    final hasUpdate = updateAsync.valueOrNull?.status == UpdateStatus.updateAvailable;
 
     final engineSelection = ref.watch(engineSelectionProvider);
     final subtitle = engineSelection.when(
@@ -89,8 +93,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
+            if (hasUpdate)
+              SliverToBoxAdapter(
+                child: _UpdateBanner(
+                  isDark: c.isDark,
+                  textPrimary: c.textPrimary,
+                  textSecondary: c.textSecondary,
+                  borderColor: c.borderColor,
+                  cardColor: c.cardColor,
+                  latest: updateAsync.valueOrNull?.latest,
+                ),
+              ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              padding: EdgeInsets.fromLTRB(24, hasUpdate ? 12 : 24, 24, 8),
               sliver: SliverToBoxAdapter(
                 child: HomeAppBar(
                   animation: _headerAnimation,
@@ -98,6 +113,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   textPrimary: c.textPrimary,
                   textSecondary: c.textSecondary,
                   subtitle: subtitle,
+                  hasUpdate: hasUpdate,
                   onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
                   onHelpTap: () => _showQuickGuide(context),
                   onSettingsTap: () => _showSettings(context),
@@ -132,11 +148,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _onRoleTap(BuildContext context, Role role) {
     HapticFeedbackService.tap();
     ref.read(activeRoleProvider.notifier).state = role;
-    if (role.id == 'commander') {
-      context.pushNamed('commander', extra: role);
-    } else {
-      context.pushNamed('chat', extra: role);
-    }
+    context.pushNamed('chat', extra: role);
   }
 
   Widget _buildDrawer(BuildContext context, ThemeColors c) {
@@ -156,15 +168,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppIcon(
-                    icon: Icons.auto_awesome,
-                    size: 36,
-                    backgroundColor: Colors.transparent,
-                    iconColor: c.textSecondary,
-                    borderColor: c.borderColor,
-                    borderWidth: 1.5,
-                  ),
-                  AppSpacing.h12,
                   Text('TOOLS', style: AppTypography.headlineMedium(c.textPrimary)),
                   AppSpacing.h4,
                   Text('Image, Document & Voice Generation',
@@ -205,6 +208,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               onTap: () {
                 Navigator.pop(context);
                 context.pushNamed('documentGen');
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.code_outlined,
+              label: 'Programmer',
+              description: 'Learn HTML/CSS/JS with an AI tutor',
+              onTap: () {
+                Navigator.pop(context);
+                context.pushNamed('programmer');
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.smart_toy_outlined,
+              label: 'Agent Driven Environment',
+              description: 'Device control & automation with AI',
+              onTap: () {
+                Navigator.pop(context);
+                context.pushNamed('agentDrivenEnvironment');
               },
             ),
             _DrawerItem(
@@ -272,6 +293,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _showRolesBrowser(BuildContext context) {
     HapticFeedbackService.tap();
     context.pushNamed('roles');
+  }
+}
+
+class _UpdateBanner extends StatelessWidget {
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color borderColor;
+  final Color cardColor;
+  final VersionInfo? latest;
+
+  const _UpdateBanner({
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.borderColor,
+    required this.cardColor,
+    required this.latest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borderColor, width: 2),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.system_update_outlined, size: 18, color: textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Update v${latest?.version ?? ''} available',
+              style: AppTypography.bodyMedium(textPrimary),
+            ),
+          ),
+          GestureDetector(
+            onTap: () async {
+              final url = latest?.updateUrl;
+              if (url != null && url.isNotEmpty) {
+                await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(color: borderColor, width: 2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text('UPDATE', style: AppTypography.labelSmall(textPrimary)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

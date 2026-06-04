@@ -135,7 +135,7 @@ class _ConversationHistoryScreenState
                         onTap: () => _openConversation(context, ref, conv),
                         onDelete: () async {
                           await ConversationStore.instance.delete(conv.id);
-                          _refresh();
+                          if (mounted) _refresh();
                         },
                       );
                     },
@@ -183,7 +183,7 @@ class _ConversationHistoryScreenState
     );
     if (confirmed == true) {
       await ConversationStore.instance.deleteByRole(widget.roleId);
-      _refresh();
+      if (mounted) _refresh();
     }
   }
 

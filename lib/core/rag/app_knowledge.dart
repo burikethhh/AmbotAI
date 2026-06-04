@@ -57,9 +57,9 @@ class AppKnowledge {
         'The project is an open-source personal assistant platform focused on privacy, offline capabilities, and mobile-first AI interaction.',
 
     // === CORE FEATURES ===
-    'Ambot AI has five core features: Chat, Commander, Image Generation, Voice Generation, and Document Generation. '
+    'Ambot AI has five core features: Chat, Agent Driven Environment, Image Generation, Voice Generation, and Document Generation. '
         'The Chat feature provides conversational AI with thinking and planning modes. '
-        'Commander provides device control and automation through voice or text commands. '
+        'Agent Driven Environment provides device control and automation through voice or text commands. '
         'Image Generation creates images using Stable Diffusion models running locally on the device. '
         'Voice Generation synthesizes speech using Piper TTS models. '
         'Document Generation creates study guides, quizzes, flashcards, summaries, and lesson plans.',
@@ -112,10 +112,10 @@ class AppKnowledge {
         'live word/character/line/paragraph statistics, and auto-save drafts. '
         'A smart formatter automatically fixes punctuation, spacing, heading style, and list formatting.',
 
-    // === COMMANDER (DEVICE CONTROL) ===
-    'The Commander feature allows Ambot AI to control Android device functions through natural language commands. '
+    // === AGENT DRIVEN ENVIRONMENT ===
+    'The Agent Driven Environment allows Ambot AI to control Android device functions through natural language commands. '
         'It can open apps, take screenshots, adjust settings, and perform automation tasks. '
-        'The commander uses Android\'s accessibility service for device interaction. '
+        'The agent uses Android\'s accessibility service for device interaction. '
         'Safety rules prevent the AI from performing potentially dangerous operations.',
 
     // === DESIGN ===

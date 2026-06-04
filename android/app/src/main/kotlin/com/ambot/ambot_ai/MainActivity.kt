@@ -300,6 +300,9 @@ class MainActivity : FlutterActivity() {
                     result.error("MISSING_PACKAGE", "packageName is required", null)
                 }
             }
+            "scrollDown", "scrollUp", "goBack", "deepLinkApp", "clickText" -> {
+                result.error("SERVICE_REQUIRED", "Enable Accessibility Service to use scroll, back, and tap features", null)
+            }
             "emergencyStop" -> {
                 result.success("Stopped (accessibility service not active)")
             }

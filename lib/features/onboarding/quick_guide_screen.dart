@@ -24,7 +24,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       title: 'ROLES',
       body:
           'Ambot is built around Roles — each one is a specialized AI assistant.\n\n'
-          'Tutor explains concepts. QuizCraft generates tests. Commander controls your device.\n\n'
+           'Tutor explains concepts. QuizCraft generates tests. Agent controls your device.\n\n'
           'Install only the roles you need. Browse more anytime.',
     ),
     _GuideStep(
@@ -39,7 +39,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       icon: Icons.computer_outlined,
       title: 'DEVICE CONTROL',
       body:
-          'Commander role lets Ambot control your device.\n\n'
+          'Agent Driven Environment lets Ambot control your device.\n\n'
           'Open apps, send messages, toggle settings, read your screen — all with AI assistance.\n\n'
           'Three modes: Ask (confirm every action), Autopilot (safe actions auto-run), Ambot Decides (AI uses trust score).',
     ),
@@ -47,7 +47,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       icon: Icons.mic_outlined,
       title: 'VOICE',
       body:
-          'Tap the mic button in Commander to speak commands.\n\n'
+          'Tap the mic button in the Agent Driven Environment to speak commands.\n\n'
           '"Open WhatsApp" — "Set a timer for 10 minutes" — "Turn on WiFi"\n\n'
           'Works offline on Android 12+. Ambot speaks responses back to you.',
     ),

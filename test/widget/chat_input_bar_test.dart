@@ -29,6 +29,8 @@ void main() {
             onVoice: () {},
             onImageGen: () {},
             onDocGen: () {},
+            onAttachImage: () {},
+            onAttachFile: () {},
           ),
         ),
       ),
@@ -36,6 +38,8 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
+    expect(find.byIcon(Icons.photo_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.attach_file_outlined), findsOneWidget);
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
     expect(find.byIcon(Icons.description_outlined), findsOneWidget);
   });
@@ -65,6 +69,8 @@ void main() {
             onVoice: () {},
             onImageGen: () {},
             onDocGen: () {},
+            onAttachImage: () {},
+            onAttachFile: () {},
           ),
         ),
       ),
@@ -98,6 +104,8 @@ void main() {
             onVoice: () {},
             onImageGen: () {},
             onDocGen: () {},
+            onAttachImage: () {},
+            onAttachFile: () {},
           ),
         ),
       ),
@@ -130,6 +138,8 @@ void main() {
             onVoice: () {},
             onImageGen: () {},
             onDocGen: () {},
+            onAttachImage: () {},
+            onAttachFile: () {},
           ),
         ),
       ),

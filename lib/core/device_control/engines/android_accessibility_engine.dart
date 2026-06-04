@@ -166,6 +166,76 @@ class AndroidAccessibilityEngine implements DeviceController {
   }
 
   @override
+  Future<DeviceActionResult> scrollDown({double distance = 0.5}) async {
+    return execute(DeviceAction(
+      id: 'scroll_down',
+      label: 'Scroll Down',
+      description: '',
+      risk: ActionRisk.safe,
+      category: ActionCategory.navigation,
+      method: 'scrollDown',
+      params: {'distance': distance},
+      confirmationMessage: 'Scroll down?',
+    ));
+  }
+
+  @override
+  Future<DeviceActionResult> scrollUp({double distance = 0.5}) async {
+    return execute(DeviceAction(
+      id: 'scroll_up',
+      label: 'Scroll Up',
+      description: '',
+      risk: ActionRisk.safe,
+      category: ActionCategory.navigation,
+      method: 'scrollUp',
+      params: {'distance': distance},
+      confirmationMessage: 'Scroll up?',
+    ));
+  }
+
+  @override
+  Future<DeviceActionResult> goBack() async {
+    return execute(DeviceAction(
+      id: 'go_back',
+      label: 'Go Back',
+      description: '',
+      risk: ActionRisk.safe,
+      category: ActionCategory.navigation,
+      method: 'goBack',
+      params: {},
+      confirmationMessage: 'Go back?',
+    ));
+  }
+
+  @override
+  Future<DeviceActionResult> deepLinkApp(String packageName, String uri) async {
+    return execute(DeviceAction(
+      id: 'deep_link',
+      label: 'Deep Link',
+      description: '',
+      risk: ActionRisk.safe,
+      category: ActionCategory.appLaunch,
+      method: 'deepLinkApp',
+      params: {'packageName': packageName, 'uri': uri},
+      confirmationMessage: 'Open deep link?',
+    ));
+  }
+
+  @override
+  Future<DeviceActionResult> clickText(String text) async {
+    return execute(DeviceAction(
+      id: 'click_screen_text',
+      label: 'Click Text',
+      description: '',
+      risk: ActionRisk.moderate,
+      category: ActionCategory.navigation,
+      method: 'clickText',
+      params: {'text': text},
+      confirmationMessage: 'Tap "$text"?',
+    ));
+  }
+
+  @override
   Future<void> emergencyStop() async {
     await _channel.invokeMethod('emergencyStop');
   }

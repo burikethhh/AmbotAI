@@ -54,7 +54,7 @@ void main() {
     test('sections cover all core features', () {
       final all = AppKnowledge.sections.join(' ').toLowerCase();
       expect(all, contains('chat'));
-      expect(all, contains('commander'));
+      expect(all, contains('agent driven environment'));
       expect(all, contains('image generation'));
       expect(all, contains('voice generation'));
       expect(all, contains('document generation'));

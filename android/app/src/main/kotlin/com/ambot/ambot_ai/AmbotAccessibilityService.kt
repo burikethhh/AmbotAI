@@ -112,6 +112,11 @@ class AmbotAccessibilityService : AccessibilityService() {
             "tapElement" -> handleTapElement(args, result)
             "typeText" -> handleTypeText(args, result)
             "navigateInApp" -> handleNavigateInApp(args, result)
+            "scrollDown" -> handleScrollDown(args, result)
+            "scrollUp" -> handleScrollUp(args, result)
+            "goBack" -> handleGoBack(result)
+            "deepLinkApp" -> handleDeepLinkApp(args, result)
+            "clickText" -> handleClickText(args, result)
             "getInstalledApps" -> handleGetInstalledApps(result)
             "emergencyStop" -> handleEmergencyStop(result)
             "dispose" -> result.success(null)
@@ -614,6 +619,136 @@ class AmbotAccessibilityService : AccessibilityService() {
         }
         // Try to find and tap the target element
         findAndTapByText(target, result)
+    }
+
+    // --- Scroll & Navigation ---
+
+    private fun handleScrollDown(args: Map<*, *>?, result: MethodChannel.Result) {
+        val distance = (args?.get("distance") as? Number)?.toFloat() ?: 0.5f
+        val root = rootInActiveWindow
+        if (root == null) {
+            result.error("NO_WINDOW", "No active window", null)
+            return
+        }
+        // Find scrollable node
+        val scrollable = findScrollableNode(root, true)
+        if (scrollable != null) {
+            scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            result.success("Scrolled down")
+        } else {
+            // Fallback: perform swipe gesture
+            performSwipe(distance, forward = true, result)
+        }
+    }
+
+    private fun handleScrollUp(args: Map<*, *>?, result: MethodChannel.Result) {
+        val distance = (args?.get("distance") as? Number)?.toFloat() ?: 0.5f
+        val root = rootInActiveWindow
+        if (root == null) {
+            result.error("NO_WINDOW", "No active window", null)
+            return
+        }
+        val scrollable = findScrollableNode(root, false)
+        if (scrollable != null) {
+            scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+            result.success("Scrolled up")
+        } else {
+            performSwipe(distance, forward = false, result)
+        }
+    }
+
+    private fun findScrollableNode(node: AccessibilityNodeInfo?, scrollDown: Boolean): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.isScrollable) {
+            // Check if can actually scroll in the desired direction
+            if (scrollDown) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (node.canScrollForward()) return node
+                } else {
+                    return node
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (node.canScrollBackward()) return node
+                } else {
+                    return node
+                }
+            }
+        }
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                findScrollableNode(child, scrollDown)?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun performSwipe(distanceFraction: Float, forward: Boolean, result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            result.error("UNSUPPORTED", "Scroll gestures require Android 7.0+", null)
+            return
+        }
+        val display = applicationContext.resources.displayMetrics
+        val width = display.widthPixels.toFloat()
+        val height = display.heightPixels.toFloat()
+
+        val startX = width / 2
+        val startY = if (forward) height * 0.7f else height * 0.3f
+        val endY = if (forward) height * 0.3f else height * 0.7f
+
+        val path = Path()
+        path.moveTo(startX, startY)
+        path.lineTo(startX, endY)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0L, 300L))
+            .build()
+        dispatchGesture(gesture, object : GestureResultCallback() {
+            override fun onCompleted(gesture: GestureDescription?) {
+                result.success("Swiped")
+            }
+            override fun onCancelled(gesture: GestureDescription?) {
+                result.error("SWIPE_CANCELLED", "Swipe gesture cancelled", null)
+            }
+        }, null)
+    }
+
+    private fun handleGoBack(result: MethodChannel.Result) {
+        val performed = performGlobalAction(GLOBAL_ACTION_BACK)
+        if (performed) {
+            result.success("Back navigation performed")
+        } else {
+            result.error("BACK_FAILED", "Could not perform back action", null)
+        }
+    }
+
+    private fun handleDeepLinkApp(args: Map<*, *>?, result: MethodChannel.Result) {
+        val packageName = args?.get("packageName") as? String ?: ""
+        val uri = args?.get("uri") as? String ?: ""
+        if (uri.isEmpty()) {
+            result.error("MISSING_URI", "uri is required", null)
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+                if (packageName.isNotEmpty()) {
+                    setPackage(packageName)
+                }
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            applicationContext.startActivity(intent)
+            result.success("Deep link opened: $uri")
+        } catch (e: Exception) {
+            result.error("DEEPLINK_FAILED", e.message, null)
+        }
+    }
+
+    private fun handleClickText(args: Map<*, *>?, result: MethodChannel.Result) {
+        val text = args?.get("text") as? String ?: ""
+        if (text.isEmpty()) {
+            result.error("MISSING_TEXT", "text is required", null)
+            return
+        }
+        findAndTapByText(text, result)
     }
 
     // --- App List ---

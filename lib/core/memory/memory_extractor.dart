@@ -105,7 +105,7 @@ class MemoryExtractor {
     if (name != null) {
       out.add(_Fact(
         key: 'user name',
-        value: 'User\'s name is ${name.group(1)}.',
+        value: 'User\'s name is ${name.group(1) ?? '(unknown)'}.',
         importance: 0.95,
       ));
     }

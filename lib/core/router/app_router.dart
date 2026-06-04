@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/chat_service.dart';
@@ -15,7 +16,8 @@ import '../../features/memory/memory_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/quick_guide_screen.dart';
 import '../../features/onboarding/welcome_screen.dart';
-import '../../features/roles/commander/commander_screen.dart';
+import '../../features/programmer/programmer_screen.dart';
+import '../../features/roles/commander/commander_screen.dart' show AgentDrivenEnvironmentScreen;
 import '../../features/roles/roles_browser_screen.dart';
 import '../../features/settings/models_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -57,24 +59,34 @@ GoRouter createRouter(WidgetRef ref) {
         name: 'chat',
         builder: (_, state) {
           final extra = state.extra;
+          if (extra is (Role, Conversation?)) {
+            return ChatScreen(role: extra.$1, initialConversation: extra.$2);
+          }
           if (extra is Role) {
             return ChatScreen(role: extra);
           }
-          final r = extra as (Role, Conversation?);
-          return ChatScreen(role: r.$1, initialConversation: r.$2);
+          return const SizedBox.shrink();
         },
       ),
       GoRoute(
         path: '/chat/history',
         name: 'chatHistory',
-        builder: (_, state) => ConversationHistoryScreen(
-          roleId: state.extra as String,
-        ),
+        builder: (_, state) {
+          final extra = state.extra;
+          return ConversationHistoryScreen(
+            roleId: extra is String ? extra : '',
+          );
+        },
       ),
       GoRoute(
-        path: '/commander',
-        name: 'commander',
-        builder: (_, state) => CommanderScreen(role: state.extra as Role),
+        path: '/agent-driven-environment',
+        name: 'agentDrivenEnvironment',
+        builder: (_, _) => const AgentDrivenEnvironmentScreen(),
+      ),
+      GoRoute(
+        path: '/programmer',
+        name: 'programmer',
+        builder: (_, _) => const ProgrammerScreen(),
       ),
       GoRoute(
         path: '/image-gen',

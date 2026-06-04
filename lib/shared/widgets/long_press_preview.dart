@@ -22,8 +22,9 @@ class _LongPressPreviewState extends State<LongPressPreview> {
   void _showOverlay() {
     if (_overlayEntry != null) return;
 
-    final renderBox = context.findRenderObject() as RenderBox;
-    if (!renderBox.hasSize) return;
+    final obj = context.findRenderObject();
+    if (obj is! RenderBox || !obj.hasSize) return;
+    final renderBox = obj;
     final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 

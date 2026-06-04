@@ -14,6 +14,8 @@ class QuickCommands extends StatelessWidget {
   final VoidCallback onReadScreen;
   final VoidCallback onQuickLaunch;
   final VoidCallback onEmergencyStop;
+  final VoidCallback onAiAnalyze;
+  final VoidCallback onGoBack;
 
   const QuickCommands({
     super.key,
@@ -24,6 +26,8 @@ class QuickCommands extends StatelessWidget {
     required this.onReadScreen,
     required this.onQuickLaunch,
     required this.onEmergencyStop,
+    required this.onAiAnalyze,
+    required this.onGoBack,
   });
 
   @override
@@ -64,6 +68,24 @@ class QuickCommands extends StatelessWidget {
                   label: 'Quick Launch',
                   isDark: isDark,
                   onTap: onQuickLaunch,
+                ),
+              ),
+              SizedBox(
+                width: constraints.maxWidth * chipWidth,
+                child: QuickChip(
+                  icon: Icons.auto_awesome,
+                  label: 'AI Analyze',
+                  isDark: isDark,
+                  onTap: onAiAnalyze,
+                ),
+              ),
+              SizedBox(
+                width: constraints.maxWidth * chipWidth,
+                child: QuickChip(
+                  icon: Icons.arrow_back,
+                  label: 'Go Back',
+                  isDark: isDark,
+                  onTap: onGoBack,
                 ),
               ),
               SizedBox(

@@ -1,7 +1,7 @@
 name: ambot_ai
 description: "Ambot AI - Your offline AI classroom"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.3.1+8
 
 environment:
   sdk: ^3.10.7
@@ -37,7 +37,11 @@ dependencies:
   share_plus: ^10.1.2
   # Open files with default app
   open_file: ^3.5.10
+  # Launch URLs
+  url_launcher: ^6.3.2
   go_router: ^17.2.3
+  webview_flutter: ^4.10.0
+  flutter_highlight: ^0.7.0
 
 dev_dependencies:
   flutter_test:

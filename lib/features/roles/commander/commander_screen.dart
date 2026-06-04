@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:permission_handler/permission_handler.dart';
+
+import '../../../core/ai/nvidia_vision.dart';
 import '../../../core/device_control/action.dart';
 import '../../../core/device_control/action_log.dart';
 import '../../../core/device_control/action_registry.dart';
@@ -10,7 +15,6 @@ import '../../../core/device_control/device_controller.dart';
 import '../../../core/device_control/engines/android_accessibility_engine.dart';
 import '../../../core/device_control/execution_mode.dart';
 import '../../../core/device_control/safety_rules.dart';
-import '../../../core/roles/role.dart';
 import '../../../core/services/haptic_feedback_service.dart';
 import '../../../core/voice/engines/android_voice_engine.dart';
 import '../../../core/voice/voice_command_parser.dart';
@@ -20,22 +24,20 @@ import '../../../shared/theme/app_typography.dart';
 import '../../../shared/theme/theme_colors.dart';
 import '../../device_control/accessibility_setup_screen.dart';
 import 'widgets/commander_app_bar.dart';
-import 'widgets/commander_history.dart';
+import 'widgets/commander_history.dart' show AgentHistory;
 import 'widgets/command_input.dart';
 import 'widgets/command_output.dart';
 import 'widgets/quick_commands.dart';
 import 'widgets/status_panel.dart';
 
-class CommanderScreen extends ConsumerStatefulWidget {
-  final Role role;
-
-  const CommanderScreen({super.key, required this.role});
+class AgentDrivenEnvironmentScreen extends ConsumerStatefulWidget {
+  const AgentDrivenEnvironmentScreen({super.key});
 
   @override
-  ConsumerState<CommanderScreen> createState() => _CommanderScreenState();
+  ConsumerState<AgentDrivenEnvironmentScreen> createState() => _AgentDrivenEnvironmentScreenState();
 }
 
-class _CommanderScreenState extends ConsumerState<CommanderScreen>
+class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnvironmentScreen>
     with TickerProviderStateMixin {
   late DeviceController _controller;
   late VoiceService _voiceService;
@@ -56,7 +58,12 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
   String _liveTranscript = '';
   bool _voiceEnabled = false;
 
+  final NvidiaVisionService _visionService = NvidiaVisionService();
   late AnimationController _statusPulseController;
+
+  // Runtime permission states (Android 13+)
+  bool _hasNotificationPerm = true;
+  bool _hasOverlayPerm = true;
 
   @override
   void initState() {
@@ -68,6 +75,27 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _init();
+    _checkRuntimePermissions();
+  }
+
+  Future<void> _checkRuntimePermissions() async {
+    if (Platform.isAndroid) {
+      final notif = await Permission.notification.status;
+      final overlay = await Permission.systemAlertWindow.status;
+      if (mounted) {
+        setState(() {
+          _hasNotificationPerm = notif.isGranted;
+          _hasOverlayPerm = overlay.isGranted;
+        });
+      }
+    }
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.request();
+      if (mounted) setState(() => _hasNotificationPerm = status.isGranted);
+    }
   }
 
   Future<void> _init() async {
@@ -132,16 +160,53 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
 
     final commands = VoiceCommandParser.parse(text);
     if (commands.isEmpty) {
-      setState(() {
-        _lastError = "Didn't understand: '$text'";
-        _statusMessage = 'Command not recognized';
-      });
-      HapticFeedbackService.error();
+      // NVIDIA LLM fallback for unfamiliar commands
+      final nvidiaResult = await _tryNvidiaCommand(text);
+      if (nvidiaResult != null) {
+        await _executeAction(nvidiaResult);
+      } else {
+        setState(() {
+          _lastError = "Didn't understand: '$text'";
+          _statusMessage = 'Command not recognized';
+        });
+        HapticFeedbackService.error();
+      }
       return;
     }
 
     final cmd = commands.first;
     await _executeAction(cmd.toAction());
+  }
+
+  Future<DeviceAction?> _tryNvidiaCommand(String text) async {
+    try {
+      final analysis = await _visionService.analyzeDocument(
+        'Parse this device control command into one of these action IDs: '
+        'launch_app, open_url, web_search, set_alarm, set_timer, toggle_wifi, '
+        'toggle_bluetooth, set_volume, set_brightness, scroll_down, scroll_up, '
+        'go_back, click_screen_text, take_screenshot, read_screen, copy_to_clipboard, '
+        'send_sms, send_email, create_note, toggle_dnd.\n\n'
+        'User said: "$text"\n\n'
+        'Return ONLY a JSON object with fields: actionId, params (object of parameters). '
+        'Use the action IDs listed above. For launch_app, set params.packageName to the app name. '
+        'For web_search, set params.query. For click_screen_text, set params.text.',
+      );
+
+      final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(analysis);
+      if (jsonMatch == null) return null;
+
+      final raw = jsonMatch.group(0);
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final actionId = decoded['actionId'] as String?;
+      final params = decoded['params'] as Map<String, dynamic>? ?? {};
+      final base = ActionRegistry.byId(actionId ?? '');
+      if (base == null) return null;
+
+      return base.copyWith(params: params);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _readScreen() async {
@@ -175,6 +240,62 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
           _isProcessing = false;
           _lastError = 'Screen read failed: $e';
           _statusMessage = 'Read failed';
+        });
+        HapticFeedbackService.error();
+      }
+    }
+  }
+
+  Future<void> _aiAnalyzeScreen() async {
+    HapticFeedbackService.medium();
+    setState(() {
+      _isProcessing = true;
+      _lastError = null;
+      _statusMessage = 'AI analyzing screen...';
+    });
+
+    try {
+      final ctx = await _controller.captureScreen();
+      if (!mounted) return;
+
+      if (ctx.screenshotBytes != null && ctx.screenshotBytes!.isNotEmpty) {
+        // Save screenshot to temp file and analyze with NVIDIA vision
+        final tempDir = Directory.systemTemp;
+        final tempFile = File('${tempDir.path}/ambot_screen_analysis.png');
+        await tempFile.writeAsBytes(ctx.screenshotBytes!);
+        final analysis = await _visionService.analyzeImage(tempFile.path);
+
+        if (mounted) {
+          setState(() {
+            _screenContext = ctx;
+            _showScreenContent = true;
+            _isProcessing = false;
+            _statusMessage = 'AI analysis complete';
+          });
+          await _voiceService.speak(analysis.substring(0, analysis.length.clamp(0, 500)));
+        }
+      } else {
+        // Text-only analysis using NVIDIA LLM
+        final analysis = await _visionService.analyzeDocument(
+          'Analyze this device screen content and describe what the user is looking at, '
+          'what actions are available, and suggest what they can do next:\n\n${ctx.text}',
+        );
+        if (mounted) {
+          setState(() {
+            _screenContext = ctx;
+            _showScreenContent = true;
+            _isProcessing = false;
+            _statusMessage = 'AI analysis complete';
+          });
+          await _voiceService.speak(analysis.substring(0, analysis.length.clamp(0, 500)));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _lastError = 'AI analysis failed: $e';
+          _statusMessage = 'Analysis failed';
         });
         HapticFeedbackService.error();
       }
@@ -236,8 +357,21 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
 
     await _voiceService.stopListening();
 
-    final commands = VoiceCommandParser.parse(text);
+    var commands = VoiceCommandParser.parse(text);
     if (commands.isEmpty) {
+      // NVIDIA LLM fallback
+      final nvidiaAction = await _tryNvidiaCommand(text);
+      if (nvidiaAction != null) {
+        await _executeAction(nvidiaAction);
+        if (mounted) {
+          setState(() {
+            _voiceState = VoiceState.idle;
+            _liveTranscript = '';
+          });
+        }
+        _isProcessingVoice = false;
+        return;
+      }
       if (mounted) {
         setState(() => _statusMessage = "Didn't understand: '$text'");
       }
@@ -417,7 +551,7 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
     final isNarrow = screenWidth < 360;
 
     return Scaffold(
-      appBar: CommanderAppBar(
+      appBar: AgentAppBar(
         mode: _mode,
         onModeChanged: (m) {
           HapticFeedbackService.selection();
@@ -439,8 +573,11 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
             statusMessage: _statusMessage,
             trustScore: _trustScore,
             hasPermission: _hasPermission,
+            hasNotificationPerm: _hasNotificationPerm,
+            hasOverlayPerm: _hasOverlayPerm,
             onDismissError: () => setState(() => _lastError = null),
             onSetupPermission: _openAccessibilitySetup,
+            onRequestNotification: _requestNotificationPermission,
             statusPulseController: _statusPulseController,
             textSecondary: c.textSecondary,
           ),
@@ -498,6 +635,15 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
                 _showAppsDialog(apps, c.isDark);
               }
             },
+            onAiAnalyze: _aiAnalyzeScreen,
+            onGoBack: () async {
+              HapticFeedbackService.tap();
+              final goBack = ActionRegistry.byId('go_back');
+              if (goBack == null) return;
+              await _executeAction(goBack.copyWith(
+                confirmationMessage: 'Go back?',
+              ));
+            },
             onEmergencyStop: () async {
               HapticFeedbackService.heavy();
               await _controller.emergencyStop();
@@ -549,7 +695,7 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
 
           // Action log
           Expanded(
-            child: CommanderHistory(
+            child: AgentHistory(
               log: _log,
               isDark: c.isDark,
               cardColor: c.cardColor,
@@ -596,7 +742,9 @@ class _CommanderScreenState extends ConsumerState<CommanderScreen>
     });
 
     try {
-      final action = ActionRegistry.byId('launch_app')!.copyWith(
+      final baseAction = ActionRegistry.byId('launch_app');
+      if (baseAction == null) return;
+      final action = baseAction.copyWith(
         params: {
           'packageName': packageName,
           'altPackages': altPackages,

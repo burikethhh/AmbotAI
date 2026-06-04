@@ -4,14 +4,14 @@ import '../../../../core/device_control/execution_mode.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/theme/app_typography.dart';
 
-class CommanderAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AgentAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ExecutionMode mode;
   final ValueChanged<ExecutionMode> onModeChanged;
   final VoidCallback onBack;
   final Color textPrimary;
   final bool isDark;
 
-  const CommanderAppBar({
+  const AgentAppBar({
     super.key,
     required this.mode,
     required this.onModeChanged,
@@ -31,7 +31,7 @@ class CommanderAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: onBack,
       ),
       title: Text(
-        'COMMANDER',
+        'AGENT',
         style: AppTypography.headlineSmall(textPrimary),
       ),
       actions: [

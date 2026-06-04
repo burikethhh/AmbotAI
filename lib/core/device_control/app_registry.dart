@@ -1,6 +1,6 @@
 /// Maps common app name keywords to Android package names.
 ///
-/// The Commander uses this registry to resolve natural-language
+/// The Agent Driven Environment uses this registry to resolve natural-language
 /// commands like "open Facebook" or "launch YouTube" into actual
 /// package names that can be launched via Intent.
 ///

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_typography.dart';
 import '../../../shared/theme/theme_colors.dart';
-import '../../../shared/widgets/app_icon.dart';
 
 class ImageGallery extends ConsumerWidget {
   final String? generatedImagePath;
@@ -14,6 +13,7 @@ class ImageGallery extends ConsumerWidget {
   final VoidCallback? onSave;
   final VoidCallback? onShare;
   final VoidCallback? onRegenerate;
+  final VoidCallback? onEdit;
 
   const ImageGallery({
     super.key,
@@ -24,6 +24,7 @@ class ImageGallery extends ConsumerWidget {
     this.onSave,
     this.onShare,
     this.onRegenerate,
+    this.onEdit,
   });
 
   @override
@@ -71,6 +72,13 @@ class ImageGallery extends ConsumerWidget {
                     onTap: onRegenerate ?? () {},
                     isDark: c.isDark,
                   ),
+                  const SizedBox(width: 12),
+                  _ActionButton(
+                    icon: Icons.edit_outlined,
+                    label: 'EDIT',
+                    onTap: onEdit ?? () {},
+                    isDark: c.isDark,
+                  ),
                 ],
               ),
             ),
@@ -84,7 +92,7 @@ class ImageGallery extends ConsumerWidget {
       decoration: BoxDecoration(
         color: c.cardColor,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: c.borderColor, width: 2),
+        border: Border.all(color: c.borderColor, width: 1.5),
       ),
       child: Center(
         child: isGenerating
@@ -122,15 +130,12 @@ class ImageGallery extends ConsumerWidget {
                       ),
                     )
                   else ...[
-                    AppIcon(
-                      icon: Icons.image_outlined,
-                      size: 64,
-                      backgroundColor: Colors.transparent,
-                      iconColor: c.textSecondary,
-                      borderColor: c.borderColor,
-                      borderWidth: 1.5,
+                    Icon(
+                      Icons.image_outlined,
+                      size: 40,
+                      color: c.textTertiary,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
                       status.isNotEmpty ? status : 'ENTER A PROMPT TO GENERATE',
                       style: AppTypography.bodyMedium(c.textTertiary),

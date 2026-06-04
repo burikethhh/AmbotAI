@@ -48,6 +48,7 @@ class SdServerClient {
   }
 
   Future<Map<String, dynamic>> getCapabilities() async {
+    if (_baseUrl == null) throw Exception('SD server not started');
     final response = await _httpClient.get(Uri.parse('$_baseUrl/sdcpp/v1/capabilities'));
     if (response.statusCode != 200) {
       throw Exception('Failed to get capabilities: ${response.statusCode}');

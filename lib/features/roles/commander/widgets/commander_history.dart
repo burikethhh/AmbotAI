@@ -4,7 +4,7 @@ import '../../../../core/device_control/action_log.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/theme/app_typography.dart';
 
-class CommanderHistory extends StatelessWidget {
+class AgentHistory extends StatelessWidget {
   final List<LogEntry> log;
   final bool isDark;
   final Color cardColor;
@@ -13,7 +13,7 @@ class CommanderHistory extends StatelessWidget {
   final Color textSecondary;
   final VoidCallback onClear;
 
-  const CommanderHistory({
+  const AgentHistory({
     super.key,
     required this.log,
     required this.isDark,

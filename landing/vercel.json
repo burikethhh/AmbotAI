@@ -1,11 +1,14 @@
 {
   "buildCommand": null,
   "outputDirectory": ".",
-  "routes": [
-    { "src": "/", "dest": "/index.html" },
-    { "src": "/version.json", "dest": "/version.json" },
-    { "src": "/download", "dest": "/index.html" }
-  ],
+  "functions": {
+    "api/download.js": {
+      "maxDuration": 10
+    },
+    "api/stats.js": {
+      "maxDuration": 10
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/memory/conversation_summary_store.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/rag/document_qa_service.dart';
@@ -11,6 +13,7 @@ import '../../core/services/chat_service.dart';
 import '../../core/services/conversation_store.dart';
 import '../../core/services/daily_limit_tracker.dart';
 import '../../core/services/haptic_feedback_service.dart';
+import '../../core/services/document_reader.dart';
 import '../../core/voice/engines/android_voice_engine.dart';
 import '../../core/voice/voice_service.dart';
 import '../../core/image_gen/cloud_image_gen.dart';
@@ -19,7 +22,9 @@ import '../../core/image_gen/prompt_enhancer.dart';
 import '../../core/config/api_keys.dart';
 import '../../core/document_gen/document_gen_service.dart';
 import '../../core/ai/ai_engine.dart' show MessageEntry;
+import '../../core/ai/engine_selector.dart' show EngineMode;
 import '../../core/ai/model_prompt.dart';
+import '../../core/ai/nvidia_vision.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
@@ -71,9 +76,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   late CloudImageGenEngine _cloudImageEngine;
   late ImagePromptEnhancer _imagePromptEnhancer;
   ({int width, int height, int steps, int seed})? _imageGenSettings;
-  int _remainingImageGenToday = 3;
-  static const int _dailyImageLimit = 3;
+  int _remainingImageGenToday = 10;
+  static const int _dailyImageLimit = 10;
   static final _imageLimitTracker = DailyLimitTracker('image_gen');
+
+  // NVIDIA Vision for image/document understanding
+  final NvidiaVisionService _visionService = NvidiaVisionService();
+
+  // Image/document attachment paths
+  String? _pendingImagePath;
+  String? _pendingFilePath;
+  String? _pendingFileName;
 
   // Document Q&A
   final DocumentQaService _qaService = DocumentQaService();
@@ -104,6 +117,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         nvidiaKey2 ?? ApiKeys.nvidiaKey2,
       );
       _imagePromptEnhancer.initialize(userNvidiaKey: nvidiaKey1 ?? ApiKeys.nvidiaKey1);
+      _visionService.setApiKeys(
+        nvidiaKey1 ?? ApiKeys.nvidiaKey1,
+        nvidiaKey2 ?? ApiKeys.nvidiaKey2,
+      );
     });
 
     _imageLimitTracker.remaining(_dailyImageLimit).then((r) {
@@ -120,6 +137,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _initVoice();
 
     Future(() {
+      if (!mounted) return;
       if (widget.initialConversation != null) {
         setState(() {
           _conversation = widget.initialConversation;
@@ -173,6 +191,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _localImageEngine.dispose();
     _cloudImageEngine.dispose();
     _imagePromptEnhancer.dispose();
+    _visionService.dispose();
     super.dispose();
   }
 
@@ -188,9 +207,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     });
   }
 
+  Future<void> _pickImage() async {
+    HapticFeedbackService.tap();
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920);
+    if (picked == null) return;
+    setState(() {
+      _pendingImagePath = picked.path;
+      _pendingFilePath = null;
+      _pendingFileName = null;
+    });
+  }
+
+  Future<void> _pickFile() async {
+    HapticFeedbackService.tap();
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.single.path;
+    if (path == null) return;
+    setState(() {
+      _pendingFilePath = path;
+      _pendingFileName = result.files.single.name;
+      _pendingImagePath = null;
+    });
+  }
+
+  void _clearPendingAttachment() {
+    setState(() {
+      _pendingImagePath = null;
+      _pendingFilePath = null;
+      _pendingFileName = null;
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _isStreaming || _conversation == null) return;
+    final hasAttachment = _pendingImagePath != null || _pendingFilePath != null;
+    if ((text.isEmpty && !hasAttachment) || _isStreaming || _conversation == null) return;
 
     final engineSelection = ref.read(engineSelectionProvider);
     final isReady = engineSelection.when(
@@ -212,6 +268,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     HapticFeedbackService.tap();
     _controller.clear();
+
+    // Handle pending attachment first (analyze and respond)
+    if (_pendingImagePath != null) {
+      await _sendWithImageAttachment(text);
+      return;
+    }
+    if (_pendingFilePath != null) {
+      await _sendWithFileAttachment(text);
+      return;
+    }
 
     // Check if this is an image generation request
     if (_isImageRequest(text)) {
@@ -340,6 +406,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     await _streamAndFinalize(text, systemPrompt, aiMessage, conversation, history: historyList);
   }
 
+  Future<void> _sendWithImageAttachment(String text) async {
+    final path = _pendingImagePath!;
+    _clearPendingAttachment();
+
+    final userMessage = ChatMessage(
+      content: text.isNotEmpty ? text : '[Attached image]',
+      role: MessageRole.user,
+      attachments: [MessageAttachment(type: MessageAttachmentType.image, path: path)],
+    );
+    setState(() {
+      _messages = [..._messages, userMessage];
+      _isStreaming = true;
+    });
+    _scrollToBottom();
+    ref.read(conversationsProvider.notifier).addMessage(widget.role.id, _conversation!.id, userMessage);
+
+    final aiMessage = ChatMessage(content: '', role: MessageRole.assistant, isStreaming: true);
+    setState(() => _messages = [..._messages, aiMessage]);
+    _scrollToBottom();
+
+    final analysis = await _visionService.analyzeImage(path);
+    if (!mounted) return;
+    await _finalizeAttachment(analysis, userMessage, aiMessage);
+  }
+
+  Future<void> _sendWithFileAttachment(String text) async {
+    final path = _pendingFilePath!;
+    final name = _pendingFileName ?? path.split('/').last;
+    _clearPendingAttachment();
+
+    if (!DocumentReader.canRead(path)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cannot read file type: ${path.split('.').last}')),
+      );
+      return;
+    }
+
+    final fileText = await DocumentReader.readText(path);
+
+    final userMessage = ChatMessage(
+      content: text.isNotEmpty ? text : '[Attached file: $name]',
+      role: MessageRole.user,
+      attachments: [MessageAttachment(type: MessageAttachmentType.document, path: path, caption: name)],
+    );
+    setState(() {
+      _messages = [..._messages, userMessage];
+      _isStreaming = true;
+    });
+    _scrollToBottom();
+    ref.read(conversationsProvider.notifier).addMessage(widget.role.id, _conversation!.id, userMessage);
+
+    final aiMessage = ChatMessage(content: '', role: MessageRole.assistant, isStreaming: true);
+    setState(() => _messages = [..._messages, aiMessage]);
+    _scrollToBottom();
+
+    final analysis = await _visionService.analyzeDocument(fileText);
+    if (!mounted) return;
+    await _finalizeAttachment(analysis, userMessage, aiMessage);
+  }
+
+  Future<void> _finalizeAttachment(String analysis, ChatMessage userMessage, ChatMessage aiMessage) async {
+    final idx = _messages.indexOf(aiMessage);
+    if (idx == -1) return;
+    setState(() {
+      _messages[idx] = aiMessage.copyWith(content: analysis, isStreaming: false);
+      _isStreaming = false;
+    });
+    _scrollToBottom();
+    ref.read(conversationsProvider.notifier).addMessage(widget.role.id, _conversation!.id, _messages.last);
+    final updatedConv = Conversation(
+      id: _conversation!.id, roleId: widget.role.id,
+      messages: _messages, createdAt: _conversation!.createdAt, updatedAt: DateTime.now(),
+    );
+    await ConversationStore.instance.save(updatedConv);
+  }
+
   /// Shared streaming helper used by normal chat and Q&A mode.
   List<MessageEntry> _buildHistoryEntries() {
     return _messages
@@ -372,6 +514,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
              now.difference(lastUpdate).inMilliseconds >= 16) {
            lastUpdate = now;
            final parsed = _parseResponse(buffer.toString());
+           if (!mounted) return;
            setState(() {
              _messages = [
                ..._messages.sublist(0, _messages.length - 1),
@@ -385,6 +528,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
            _scrollToBottom();
          }
        }
+      if (!mounted) return;
       // Final update
       final parsed = _parseResponse(buffer.toString());
       setState(() {
@@ -399,21 +543,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       });
       _scrollToBottom();
     } catch (e) {
-      final errorMsg = e.toString().replaceFirst('Exception: ', '');
+      final rawError = e.toString().replaceFirst('Exception: ', '');
+      final isNetworkError = rawError.contains('SocketException') ||
+          rawError.contains('HandshakeException') ||
+          rawError.contains('HttpException') ||
+          rawError.contains('TimeoutException') ||
+          rawError.contains('No address') ||
+          rawError.contains('Connection refused') ||
+          rawError.contains('Failed host lookup');
       HapticFeedbackService.error();
+
+      final engineSelection = ref.read(engineSelectionProvider);
+      final mode = engineSelection.when(
+        data: (s) => s.mode,
+        loading: () => null,
+        error: (_, _) => null,
+      );
+
       if (buffer.isEmpty) {
-        buffer.write('Failed to get a response.\n\n`$errorMsg`');
+        if (mode == EngineMode.cloud && isNetworkError) {
+          buffer.write('Could not reach the cloud AI service.'
+              '\n\nMake sure you have an internet connection and try again.'
+              '\n\nAlternatively, download a local AI model in Settings → AI MODEL '
+              'to use Ambot AI offline.');
+        } else if (mode == EngineMode.cloud) {
+          buffer.write('Cloud AI service error.'
+              '\n\nTry again later. If the problem persists,'
+              '\ndownload a local model in Settings → AI MODEL.');
+        } else {
+          buffer.write('Failed to get a response.\n\n`$rawError`');
+        }
       } else {
-        buffer.write('\n\n---\n*Stream interrupted:* `$errorMsg`');
+        if (isNetworkError) {
+          buffer.write('\n\n---\n'
+              '*Connection lost. Make sure you\'re online.*');
+        } else {
+          buffer.write('\n\n---\n*Stream interrupted:* `$rawError`');
+        }
       }
       if (mounted) {
         setState(() {
-          _lastError = errorMsg;
+          _lastError = rawError;
           _lastUserMessage = userText;
         });
       }
     }
 
+    if (!mounted) return;
     final fullContent = buffer.toString().trim();
     final parsed = _parseResponse(fullContent);
     final finalMessage = ChatMessage(
@@ -1208,6 +1384,8 @@ TOPICS: [keyword1], [keyword2], [keyword3]
                 });
               },
             ),
+          if (_pendingImagePath != null || _pendingFilePath != null)
+            _buildPendingAttachment(c),
           ChatInputBar(
             controller: _controller,
             focusNode: _focusNode,
@@ -1221,9 +1399,29 @@ TOPICS: [keyword1], [keyword2], [keyword3]
             onVoice: _toggleVoice,
             onImageGen: _showImageGenDialog,
             onDocGen: _showDocGenDialog,
+            onAttachImage: _pickImage,
+            onAttachFile: _pickFile,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPendingAttachment(ThemeColors c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.cardColor,
+        border: Border(top: BorderSide(color: c.borderColor)),
+      ),
+      child: Row(children: [
+        Icon(_pendingImagePath != null ? Icons.image : Icons.attach_file, size: 16, color: c.textSecondary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(
+          _pendingImagePath != null ? 'Image attached' : 'File: ${_pendingFileName ?? ''}',
+          style: AppTypography.labelSmall(c.textSecondary), overflow: TextOverflow.ellipsis)),
+        GestureDetector(onTap: _clearPendingAttachment, child: Icon(Icons.close, size: 16, color: c.textSecondary)),
+      ]),
     );
   }
 

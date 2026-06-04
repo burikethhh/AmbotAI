@@ -196,15 +196,23 @@ class MemoryService {
   }
 
   Future<int> importJson(String raw, {bool replace = false}) async {
-    final data = jsonDecode(raw) as Map<String, dynamic>;
-    final entries = (data['entries'] as List)
-        .map((e) => MemoryEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-    if (replace) await wipeAll();
-    for (final e in entries) {
-      await _boxOrThrow.put(e.id, jsonEncode(e.toJson()));
+    try {
+      final data = jsonDecode(raw);
+      if (data is! Map<String, dynamic>) return 0;
+      final rawEntries = data['entries'];
+      if (rawEntries is! List) return 0;
+      final entries = rawEntries
+          .map((e) => e is Map<String, dynamic> ? MemoryEntry.fromJson(e) : null)
+          .whereType<MemoryEntry>()
+          .toList();
+      if (replace) await wipeAll();
+      for (final e in entries) {
+        await _boxOrThrow.put(e.id, jsonEncode(e.toJson()));
+      }
+      return entries.length;
+    } catch (_) {
+      return 0;
     }
-    return entries.length;
   }
 
   // --- Pruning ------------------------------------------------------------

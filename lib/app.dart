@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/ai/engine_selector.dart';
@@ -43,7 +44,7 @@ class _AmbotAppState extends ConsumerState<AmbotApp>
   @override
   void didHaveMemoryPressure() {
     final engine = ref.read(aiEngineProvider);
-    engine.handleMemoryPressure();
+    unawaited(engine.handleMemoryPressure());
   }
 
   @override

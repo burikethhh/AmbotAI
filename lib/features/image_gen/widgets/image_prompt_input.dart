@@ -21,54 +21,65 @@ class ImagePromptInput extends ConsumerWidget {
     final c = ref.watch(themeColorsProvider);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
         color: c.isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border(
-          top: BorderSide(color: c.borderColor, width: 2),
-        ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: c.cardColor,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: c.borderColor, width: 2),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.cardColor,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: c.borderColor, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
               child: TextField(
                 controller: controller,
-                style: AppTypography.bodyMedium(c.textPrimary),
+                style: AppTypography.bodyLarge(c.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Describe the image...',
-                  hintStyle: AppTypography.bodyMedium(c.textTertiary),
+                  hintStyle: AppTypography.bodyLarge(c.textTertiary),
                   border: InputBorder.none,
-                  isDense: true,
+                  isDense: false,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
                 minLines: 1,
                 maxLines: 3,
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: isGenerating ? null : onGenerate,
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: c.isDark ? AppColors.white : AppColors.black,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Icon(
-                Icons.bolt,
-                color: c.isDark ? AppColors.black : AppColors.white,
-                size: 20,
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: isGenerating ? null : onGenerate,
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isGenerating
+                      ? AppColors.lightGrey
+                      : (c.isDark ? AppColors.white : AppColors.black),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.send,
+                  color: isGenerating
+                      ? (c.isDark ? AppColors.grey : AppColors.silver)
+                      : (c.isDark ? AppColors.black : AppColors.white),
+                  size: 20,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

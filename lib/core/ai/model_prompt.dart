@@ -18,10 +18,8 @@ Future<bool> showModelRequiredPrompt({
 }) async {
   final modelState = ref.read(modelManagerProvider);
 
-  // If model is already ready, no prompt needed
   if (modelState.isReady) return true;
 
-  // If currently downloading, tell user to wait
   if (modelState.isDownloading || modelState.isPaused) {
     _showDownloadingSnackbar(context, ref, modelState);
     return false;
@@ -67,7 +65,6 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
   ModelInfo? _recommendedModel;
   bool _loading = true;
   bool _downloading = false;
-  bool _showCloudOption = false;
 
   @override
   void initState() {
@@ -87,7 +84,6 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
           _capability = cap;
           _recommendedModel = model;
           _loading = false;
-          _showCloudOption = model == null;
         });
       }
     } catch (_) {
@@ -109,7 +105,6 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
       hfToken: hfToken,
     );
 
-    // Close dialog and let the feature wait for model to be ready
     Navigator.of(context).pop(true);
   }
 
@@ -130,7 +125,6 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 Container(
@@ -140,11 +134,7 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: c.borderColor, width: 2),
                   ),
-                  child: Icon(
-                    Icons.download_outlined,
-                    color: c.textPrimary,
-                    size: 24,
-                  ),
+                  child: Icon(Icons.smart_toy_outlined, color: c.textPrimary, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -152,11 +142,11 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MODEL REQUIRED',
+                        'AI ENGINE REQUIRED',
                         style: AppTypography.headlineSmall(c.textPrimary),
                       ),
                       Text(
-                        '${widget.featureName} needs an AI model',
+                        '${widget.featureName} needs an AI engine',
                         style: AppTypography.bodySmall(c.textSecondary),
                       ),
                     ],
@@ -174,8 +164,7 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
                   child: Column(
                     children: [
                       SizedBox(
-                        width: 32,
-                        height: 32,
+                        width: 32, height: 32,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -184,42 +173,187 @@ class _ModelRequiredDialogState extends ConsumerState<_ModelRequiredDialog> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        'Detecting device capabilities...',
-                        style: AppTypography.bodySmall(c.textSecondary),
-                      ),
+                      Text('Detecting device capabilities...',
+                        style: AppTypography.bodySmall(c.textSecondary)),
                     ],
                   ),
                 ),
               )
             else if (_downloading)
               _DownloadingState(isDark: c.isDark, textSecondary: c.textSecondary)
-            else if (_recommendedModel != null)
-              _ModelOption(
-                model: _recommendedModel!,
-                capability: _capability,
+            else ...[
+              _OptionWedge(
+                icon: Icons.wifi,
+                title: 'Option 1: Use Cloud AI (Recommended)',
+                body: 'Ambot AI comes with built-in NVIDIA cloud AI keys. '
+                    'Just connect to the internet and start chatting — no download needed. '
+                    'Works automatically with no setup required.',
                 isDark: c.isDark,
                 textPrimary: c.textPrimary,
                 textSecondary: c.textSecondary,
                 cardColor: c.cardColor,
                 borderColor: c.borderColor,
-                onDownload: _startDownload,
-                onDismiss: _dismiss,
-              )
-            else
-              _NoModelOption(
-                isDark: c.isDark,
-                textPrimary: c.textPrimary,
-                textSecondary: c.textSecondary,
-                textTertiary: c.textTertiary,
-                cardColor: c.cardColor,
-                borderColor: c.borderColor,
-                showCloudOption: _showCloudOption,
-                onDismiss: _dismiss,
               ),
+
+              const SizedBox(height: 12),
+
+              if (_recommendedModel != null)
+                _LocalModelOption(
+                  model: _recommendedModel!,
+                  capability: _capability,
+                  isDark: c.isDark,
+                  textPrimary: c.textPrimary,
+                  textSecondary: c.textSecondary,
+                  cardColor: c.cardColor,
+                  borderColor: c.borderColor,
+                  onDownload: _startDownload,
+                )
+              else
+                _OptionWedge(
+                  icon: Icons.warning_amber,
+                  title: 'Cannot download a local model',
+                  body: 'Your device doesn\'t meet the minimum requirements for any '
+                      'available model (needs at least 4 GB RAM and 500 MB free storage). '
+                      'Use Cloud AI (Option 1) instead — just connect to the internet.',
+                  isDark: c.isDark,
+                  textPrimary: c.textPrimary,
+                  textSecondary: c.textSecondary,
+                  cardColor: c.cardColor,
+                  borderColor: c.borderColor,
+                  isWarning: true,
+                ),
+
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: _dismiss,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: c.borderColor),
+                    foregroundColor: c.textPrimary,
+                    textStyle: AppTypography.labelMedium(c.textPrimary),
+                  ),
+                  child: const Text('GOT IT'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OptionWedge extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color cardColor;
+  final Color borderColor;
+  final bool isWarning;
+
+  const _OptionWedge({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.cardColor,
+    required this.borderColor,
+    this.isWarning = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isWarning
+            ? AppColors.danger.withValues(alpha: 0.08)
+            : cardColor,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isWarning
+              ? AppColors.danger.withValues(alpha: 0.3)
+              : borderColor,
+          width: isWarning ? 1 : 2,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: isWarning ? AppColors.danger : textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTypography.labelMedium(textPrimary)),
+                const SizedBox(height: 4),
+                Text(body, style: AppTypography.bodySmall(textSecondary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalModelOption extends StatelessWidget {
+  final ModelInfo model;
+  final DeviceCapability? capability;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color cardColor;
+  final Color borderColor;
+  final VoidCallback onDownload;
+
+  const _LocalModelOption({
+    required this.model,
+    required this.capability,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.cardColor,
+    required this.borderColor,
+    required this.onDownload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _OptionWedge(
+          icon: Icons.phone_android,
+          title: 'Option 2: Download a Local Model (Offline)',
+          body: '${model.name} (${model.displaySize}) — '
+              '${capability != null ? 'Fits your ${capability!.tierLabel} device. ' : ''}'
+              'Runs entirely on-device. No internet required after download.',
+          isDark: isDark,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
+          cardColor: cardColor,
+          borderColor: borderColor,
+        ),
+
+        const SizedBox(height: 8),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onDownload,
+            child: Text('DOWNLOAD ${model.name.toUpperCase()}'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -249,273 +383,6 @@ class _DownloadingState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
-    );
-  }
-}
-
-class _ModelOption extends StatelessWidget {
-  final ModelInfo model;
-  final DeviceCapability? capability;
-  final bool isDark;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color cardColor;
-  final Color borderColor;
-  final VoidCallback onDownload;
-  final VoidCallback onDismiss;
-
-  const _ModelOption({
-    required this.model,
-    required this.capability,
-    required this.isDark,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.cardColor,
-    required this.borderColor,
-    required this.onDownload,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: borderColor, width: 2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    model.name.toUpperCase(),
-                    style: AppTypography.bodyLarge(textPrimary),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Text(
-                      model.displaySize,
-                      style: AppTypography.labelSmall(textSecondary),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (capability != null)
-                Text(
-                  'Recommended for your ${capability!.tierLabel} device',
-                  style: AppTypography.labelSmall(textSecondary),
-                ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Privacy note
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: (isDark ? AppColors.white : AppColors.black).withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.lock_outline, size: 16, color: textSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Runs entirely on your device. No data leaves your phone.',
-                  style: AppTypography.labelSmall(textSecondary),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Actions
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onDismiss,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: borderColor),
-                ),
-                child: Text('LATER', style: AppTypography.labelMedium(textPrimary)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton(
-                onPressed: onDownload,
-                child: const Text('DOWNLOAD'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _NoModelOption extends StatelessWidget {
-  final bool isDark;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color textTertiary;
-  final Color cardColor;
-  final Color borderColor;
-  final bool showCloudOption;
-  final VoidCallback onDismiss;
-
-  const _NoModelOption({
-    required this.isDark,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.textTertiary,
-    required this.cardColor,
-    required this.borderColor,
-    required this.showCloudOption,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.danger.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppColors.danger.withValues(alpha: 0.3), width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.warning_amber, size: 20, color: AppColors.danger),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'No compatible model found for this device.',
-                  style: AppTypography.bodySmall(textPrimary),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        Text(
-          'Options:',
-          style: AppTypography.labelMedium(textSecondary),
-        ),
-
-        const SizedBox(height: 8),
-
-        if (showCloudOption)
-          _OptionTile(
-            icon: Icons.cloud_outlined,
-            title: 'Use Cloud Mode',
-            subtitle: 'Requires API key (Settings)',
-            isDark: isDark,
-            textPrimary: textPrimary,
-            textSecondary: textSecondary,
-            cardColor: cardColor,
-            borderColor: borderColor,
-            onTap: () {
-              Navigator.of(context).pop(false);
-            },
-          ),
-
-        _OptionTile(
-          icon: Icons.settings_outlined,
-          title: 'Configure Later',
-          subtitle: 'Set up in Settings',
-          isDark: isDark,
-          textPrimary: textPrimary,
-          textSecondary: textSecondary,
-          cardColor: cardColor,
-          borderColor: borderColor,
-          onTap: onDismiss,
-        ),
-      ],
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool isDark;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color cardColor;
-  final Color borderColor;
-  final VoidCallback onTap;
-
-  const _OptionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.isDark,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.cardColor,
-    required this.borderColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(4),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: textSecondary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTypography.bodyMedium(textPrimary)),
-                    Text(subtitle, style: AppTypography.labelSmall(textSecondary)),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, size: 14, color: textSecondary),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../../shared/theme/app_typography.dart';
 import '../../../shared/theme/theme_colors.dart';
 import '../../../shared/widgets/ambot_avatar.dart';
 import '../../../core/document_gen/document_gen_service.dart';
+import '../../../core/image_gen/image_template.dart';
 import 'typing_indicator.dart';
 
 class ChatMessageBubble extends StatelessWidget {
@@ -336,8 +337,11 @@ class _AttachmentView extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _AttachmentButton(icon: Icons.download_outlined, label: 'Save',
+                    onTap: () => _saveImage(context, attachment.path)),
+                const SizedBox(width: 8),
                 _AttachmentButton(icon: Icons.share, label: 'Share',
-                    onTap: () => _shareFile(context, attachment.path)),
+                    onTap: () => _shareImage(context, attachment.path)),
                 const SizedBox(width: 8),
                 _AttachmentButton(icon: Icons.fullscreen, label: 'Full',
                     onTap: () => _showImagePreview(context)),
@@ -419,6 +423,36 @@ class _AttachmentView extends StatelessWidget {
     }
   }
 
+  Future<void> _saveImage(BuildContext context, String path) async {
+    final saved = await ImageTemplate.saveToGallery(path);
+    if (saved.isNotEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved: ${saved.split('/').last}')),
+      );
+    }
+  }
+
+  Future<void> _shareImage(BuildContext context, String path) async {
+    final file = File(path);
+    if (!await file.exists()) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File not found')),
+        );
+      }
+      return;
+    }
+    final watermarked = await ImageTemplate.applyWatermark(path);
+    if (context.mounted) {
+      final success = await DocumentGenService.shareFile(watermarked, subject: 'Ambot AI Image');
+      if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to share image')),
+        );
+      }
+    }
+  }
+
   Future<void> _openFile(BuildContext context, String path) async {
     final file = File(path);
     if (!await file.exists()) {
@@ -447,7 +481,11 @@ class _AttachmentView extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.share, color: Colors.white),
-                onPressed: () => _shareFile(context, attachment.path),
+                onPressed: () => _shareImage(context, attachment.path),
+              ),
+              IconButton(
+                icon: const Icon(Icons.download_outlined, color: Colors.white),
+                onPressed: () => _saveImage(context, attachment.path),
               ),
             ],
           ),

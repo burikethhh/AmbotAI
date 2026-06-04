@@ -355,18 +355,20 @@ class DocumentGenService {
     if (!await dir.exists()) return [];
 
     final files = <GeneratedFileInfo>[];
-    await for (final entity in dir.list()) {
-      if (entity is File) {
-        final stat = await entity.stat();
-        files.add(GeneratedFileInfo(
-          path: entity.path,
-          name: entity.uri.pathSegments.last,
-          size: stat.size,
-          createdAt: stat.modified,
-          type: DocumentType.general,
-        ));
+    try {
+      await for (final entity in dir.list()) {
+        if (entity is File) {
+          final stat = await entity.stat();
+          files.add(GeneratedFileInfo(
+            path: entity.path,
+            name: entity.uri.pathSegments.last,
+            size: stat.size,
+            createdAt: stat.modified,
+            type: DocumentType.general,
+          ));
+        }
       }
-    }
+    } catch (_) {}
 
     files.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return files;

@@ -40,6 +40,21 @@ abstract class DeviceController {
   /// Get the list of installed apps the AI can launch.
   Future<List<InstalledApp>> getInstalledApps();
 
+  /// Scroll the current screen down by a fraction (0.0-1.0).
+  Future<DeviceActionResult> scrollDown({double distance = 0.5});
+
+  /// Scroll the current screen up by a fraction (0.0-1.0).
+  Future<DeviceActionResult> scrollUp({double distance = 0.5});
+
+  /// Simulate the system back button.
+  Future<DeviceActionResult> goBack();
+
+  /// Open a deep link URI in a specific app.
+  Future<DeviceActionResult> deepLinkApp(String packageName, String uri);
+
+  /// Find and tap text visible on the current screen.
+  Future<DeviceActionResult> clickText(String text);
+
   /// Stop any ongoing automation immediately.
   Future<void> emergencyStop();
 

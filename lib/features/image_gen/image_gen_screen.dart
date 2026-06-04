@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/image_gen/cloud_image_gen.dart';
 import '../../core/image_gen/local_image_gen.dart';
 import '../../core/image_gen/prompt_enhancer.dart';
+import '../../core/image_gen/image_template.dart';
 import '../../core/config/api_keys.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/connectivity.dart';
 import '../../core/services/daily_limit_tracker.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
@@ -33,7 +37,7 @@ class _ImageGenScreenState extends ConsumerState<ImageGenScreen> {
   int _remainingToday = 3;
   bool _enhancing = false;
 
-  static const int _dailyImageLimit = 3;
+  static const int _dailyImageLimit = 10;
   static final _imageLimitTracker = DailyLimitTracker('image_gen');
 
   @override
@@ -99,39 +103,30 @@ class _ImageGenScreenState extends ConsumerState<ImageGenScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: c.isDark ? Colors.red.shade900 : Colors.red.shade50,
-              child: Text('$_remainingToday cloud generation${_remainingToday == 1 ? '' : 's'} remaining today',
-                style: AppTypography.labelSmall(c.isDark ? Colors.red.shade200 : Colors.red.shade800)),
+              color: c.isDark ? const Color(0xFF2A1515) : const Color(0xFFFFF5F5),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: c.isDark ? Colors.red.shade300 : Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Text('$_remainingToday cloud generation${_remainingToday == 1 ? '' : 's'} remaining today',
+                    style: AppTypography.labelSmall(c.isDark ? Colors.red.shade200 : Colors.red.shade800)),
+                ],
+              ),
             ),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (_source == 'cloud')
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_remainingToday < _dailyImageLimit)
-                            Chip(
-                              avatar: Icon(Icons.auto_awesome, size: 14, color: c.textPrimary),
-                              label: Text('$_remainingToday/$_dailyImageLimit today',
-                                style: AppTypography.labelSmall(c.textPrimary)),
-                              backgroundColor: c.cardColor,
-                              side: BorderSide.none,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                        ],
-                      ),
-                    ),
                   ImageGallery(
                     generatedImagePath: _generatedImagePath,
                     isGenerating: _isGenerating,
                     progress: _progress,
                     status: _status,
+                    onSave: _saveImage,
+                    onShare: _shareImage,
                     onRegenerate: _regenerate,
+                    onEdit: _editImage,
                   ),
                 ],
               ),
@@ -206,9 +201,32 @@ class _ImageGenScreenState extends ConsumerState<ImageGenScreen> {
       }
     } catch (e) {
       if (mounted && !_cancelled) {
-        setState(() {
-          _status = 'Failed: $e';
-        });
+        final errorText = e.toString().replaceFirst('Exception: ', '');
+        final online = await hasInternetConnection();
+
+        String message;
+        if (!online && _source == 'cloud') {
+          message = 'No internet connection. Cloud image generation needs internet.\n\n'
+              'Options:\n'
+              '1. Connect to the internet and try again.\n'
+              '2. Download a local Stable Diffusion model to generate offline '
+              '(see Settings → AI MODEL).';
+        } else if (!online && _source == 'local') {
+          message = 'Local generation failed and you\'re offline.\n'
+              'Make sure the model is properly downloaded in Settings → AI MODEL.';
+        } else if (errorText.contains('All cloud methods failed') ||
+            errorText.contains('All cloud image generation methods failed')) {
+          message = 'Cloud image generation is currently unavailable.\n\n'
+              'To generate images, you can:\n'
+              '1. Try again later (NVIDIA cloud may be temporarily down).\n'
+              '2. Download a local Stable Diffusion model in Settings → AI MODEL '
+              'for offline generation.\n'
+              '3. Add a Hugging Face token in Settings → API KEYS.';
+        } else {
+          message = 'Failed: $errorText';
+        }
+
+        setState(() => _status = message);
       }
     } finally {
       if (mounted) {
@@ -271,6 +289,76 @@ class _ImageGenScreenState extends ConsumerState<ImageGenScreen> {
           _generatedImagePath = progress.imagePath;
         }
       });
+    }
+  }
+
+  Future<void> _saveImage() async {
+    if (_generatedImagePath == null) return;
+    final savedPath = await ImageTemplate.saveToGallery(_generatedImagePath!);
+    if (savedPath.isEmpty || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved: ${savedPath.split('/').last}')),
+    );
+  }
+
+  Future<void> _shareImage() async {
+    if (_generatedImagePath == null) return;
+    final file = File(_generatedImagePath!);
+    if (!await file.exists()) return;
+    final watermarked = await ImageTemplate.applyWatermark(_generatedImagePath!);
+    if (mounted) {
+      await Share.shareXFiles(
+        [XFile(watermarked)],
+        subject: 'Ambot AI Image',
+      );
+    }
+  }
+
+  Future<void> _editImage() async {
+    if (_generatedImagePath == null) return;
+    if (!mounted) return;
+    final c = ref.read(themeColorsProvider);
+    final editController = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+        title: Text('Edit Image', style: TextStyle(color: c.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Describe what you want to change:', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: editController,
+              autofocus: true,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'e.g. Make it more vibrant, add a sunset...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+                filled: true,
+                fillColor: c.cardColor,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: c.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, editController.text.trim()),
+            child: Text('Edit', style: TextStyle(color: c.textPrimary)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      _promptController.text = result;
+      await _generate();
     }
   }
 

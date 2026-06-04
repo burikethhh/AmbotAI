@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Simple internet connectivity check.
 /// Returns true if a known host can be resolved.
@@ -11,3 +12,7 @@ Future<bool> hasInternetConnection() async {
     return false;
   }
 }
+
+final connectivityProvider = FutureProvider<bool>((ref) async {
+  return hasInternetConnection();
+});

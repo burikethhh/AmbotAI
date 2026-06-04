@@ -597,27 +597,6 @@ class DefaultRoles {
       createdAt: DateTime(2026, 1, 1),
     ),
 
-    // --- Productivity / Device Control ---
-    Role(
-      id: 'commander',
-      name: 'Commander',
-      description: 'Control your device. Launch apps, toggle settings, send messages, and more with voice commands.',
-      systemPrompt:
-          'You are Ambot Commander, a device control assistant. You can help the user interact with '
-          'their Android device by performing actions like launching apps, opening URLs, toggling '
-          'settings, sending messages, and reading the screen. Always explain what you are about to '
-          'do before doing it. Respect the user\'s execution mode preferences. Never execute dangerous '
-          'actions without explicit confirmation. If you cannot perform an action, explain why and '
-          'suggest an alternative.',
-      category: RoleCategory.universal,
-      domain: RoleDomain.productivity,
-      tags: const ['device-control', 'automation', 'assistant', 'voice'],
-      icon: Icons.computer_outlined,
-      defaultMemoryScope: MemoryScope.role,
-      minimumTier: DeviceTier.mid,
-      createdAt: DateTime(2026, 1, 1),
-    ),
-
     // --- Universal: Creative Domain ---
     Role(
       id: 'brainstormer',
