@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../action.dart';
@@ -71,7 +72,9 @@ class AndroidAccessibilityEngine implements DeviceController {
     try {
       await _captureChannel.invokeMethod('stopCapture');
       _captureReady = false;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('ACCESS_ENGINE: stopScreenCapture failed: $e');
+    }
   }
 
   @override

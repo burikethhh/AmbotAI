@@ -81,6 +81,7 @@ class _ConversationHistoryScreenState
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: Icon(Icons.clear, color: c.textSecondary, size: 18),
+                        tooltip: 'Clear search',
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchQuery = '');

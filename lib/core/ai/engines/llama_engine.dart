@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:llamadart/llamadart.dart' as ld;
 import '../ai_engine.dart';
 import '../capability_detector.dart';
@@ -71,6 +72,9 @@ class LlamaEngine implements AIEngine {
 
   /// Frees the KV cache under memory pressure by unloading and
   /// immediately reloading the model with a smaller context.
+  @override
+  void cancelStream() {}
+
   @override
   Future<void> handleMemoryPressure() async {
     if (!_isReady || _engine == null) return;
@@ -167,7 +171,9 @@ class LlamaEngine implements AIEngine {
       )) {
         break;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LLAMA: warmup failed: $e');
+    }
   }
 
   @override

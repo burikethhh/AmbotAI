@@ -39,6 +39,9 @@ class _MockAIEngine implements AIEngine {
   Future<void> handleMemoryPressure() async {}
 
   @override
+  void cancelStream() {}
+
+  @override
   String get engineName => 'mock';
 
   @override

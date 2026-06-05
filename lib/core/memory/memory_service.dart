@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -181,7 +182,9 @@ class MemoryService {
           useCount: memory.useCount + 1,
         );
         puts.add(_boxOrThrow.put(id, jsonEncode(updated.toJson())));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('MEMORY: failed to update entry: $e');
+      }
     }
     if (puts.isNotEmpty) await Future.wait(puts);
   }

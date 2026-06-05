@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/roles/role.dart';
+import '../../../core/roles/role_domain.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_typography.dart';
 import '../../../shared/theme/theme_colors.dart';
 import '../../../shared/widgets/app_icon.dart';
-import '../../../core/roles/role_domain.dart';
 
 class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final Role role;

@@ -295,20 +295,15 @@ class VoiceCommandParser {
 
     // "go home"
     if (lower == 'go home' || lower == 'home' || lower == 'go home.') {
-      commands.add(ParsedVoiceCommand(
-        action: DeviceAction(
-          id: 'go_home',
-          label: 'Go Home',
-          description: 'Navigate to home screen.',
-          risk: ActionRisk.safe,
-          category: ActionCategory.navigation,
-          method: 'goHome',
-          confirmationMessage: 'Go to home screen?',
-        ),
-        params: {},
-        confidence: 0.95,
-        spokenResponse: 'Going home',
-      ));
+      final action = ActionRegistry.byId('go_home');
+      if (action != null) {
+        commands.add(ParsedVoiceCommand(
+          action: action,
+          params: {},
+          confidence: 0.95,
+          spokenResponse: 'Going home',
+        ));
+      }
     }
 
     // "search for [query]" / "google [query]"
@@ -335,32 +330,30 @@ class VoiceCommandParser {
 
     // "what apps do I have?" / "list my apps"
     if (lower.contains('what apps') || lower.contains('list') && lower.contains('apps')) {
-      commands.add(ParsedVoiceCommand(
-        action: ActionRegistry.byId('get_installed_apps')!,
-        params: {},
-        confidence: 0.85,
-        spokenResponse: 'Here are your installed apps',
-      ));
+      final action = ActionRegistry.byId('get_installed_apps');
+      if (action != null) {
+        commands.add(ParsedVoiceCommand(
+          action: action,
+          params: {},
+          confidence: 0.85,
+          spokenResponse: 'Here are your installed apps',
+        ));
+      }
     }
 
     // "what time is it?"
     if (lower.contains('what time') || lower.contains('current time')) {
       final now = DateTime.now();
       final timeStr = '${now.hour}:${now.minute.toString().padLeft(2, '0')}';
-      commands.add(ParsedVoiceCommand(
-        action: DeviceAction(
-          id: 'get_time',
-          label: 'Get Time',
-          description: 'Tell the current time.',
-          risk: ActionRisk.safe,
-          category: ActionCategory.custom,
-          method: 'getTime',
-          confirmationMessage: 'Tell the time?',
-        ),
-        params: {},
-        confidence: 0.95,
-        spokenResponse: 'It\'s $timeStr',
-      ));
+      final action = ActionRegistry.byId('get_time');
+      if (action != null) {
+        commands.add(ParsedVoiceCommand(
+          action: action,
+          params: {},
+          confidence: 0.95,
+          spokenResponse: 'It\'s $timeStr',
+        ));
+      }
     }
 
     return commands;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -44,7 +45,9 @@ class SdServerClient {
     _httpClient.close();
     try {
       await _pluginChannel.invokeMethod('stop');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SD_CLIENT: stop failed: $e');
+    }
   }
 
   Future<Map<String, dynamic>> getCapabilities() async {
@@ -144,7 +147,9 @@ class SdServerClient {
       await _httpClient.post(
         Uri.parse('$_baseUrl/sdcpp/v1/jobs/$jobId/cancel'),
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SD_CLIENT: cancel job failed: $e');
+    }
   }
 
   Future<String> _saveBase64Image(String b64) async {

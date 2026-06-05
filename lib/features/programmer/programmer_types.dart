@@ -33,4 +33,16 @@ class ProjectFile {
     final dot = filename.lastIndexOf('.');
     return dot == -1 ? '' : filename.substring(dot);
   }
+
+  Map<String, dynamic> toJson() => {
+        'filename': filename,
+        'content': content,
+        'language': language,
+      };
+
+  factory ProjectFile.fromJson(Map<String, dynamic> json) => ProjectFile(
+        filename: json['filename'] as String,
+        content: json['content'] as String,
+        language: json['language'] as String,
+      );
 }

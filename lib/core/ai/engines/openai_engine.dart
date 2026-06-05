@@ -15,6 +15,7 @@ class OpenAIEngine implements AIEngine {
   final int maxTokens;
   bool _isReady = false;
   late final http.Client _client;
+  http.StreamedResponse? _currentResponse;
 
   OpenAIEngine({
     required this.apiKey,
@@ -102,6 +103,9 @@ class OpenAIEngine implements AIEngine {
           ..headers.addAll(_buildHeaders())
           ..body = jsonEncode(body);
 
+    _currentResponse?.stream.drain();
+    _currentResponse = null;
+
     final streamedResponse =
         await _client.send(request).timeout(const Duration(seconds: 30));
 
@@ -109,6 +113,8 @@ class OpenAIEngine implements AIEngine {
       final errorBody = await streamedResponse.stream.bytesToString();
       throw Exception('API error ${streamedResponse.statusCode}: $errorBody');
     }
+
+    _currentResponse = streamedResponse;
 
     // Parse SSE stream
     final lineStream =
@@ -143,6 +149,7 @@ class OpenAIEngine implements AIEngine {
         }
       }
     }
+    _currentResponse = null;
   }
 
   Map<String, String> _buildHeaders() {
@@ -156,6 +163,12 @@ class OpenAIEngine implements AIEngine {
   @override
   Future<void> dispose() async {
     _client.close();
+  }
+
+  @override
+  void cancelStream() {
+    _currentResponse?.stream.drain();
+    _currentResponse = null;
   }
 
   @override

@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -68,7 +70,9 @@ class ConversationSummaryStore {
         out.add(SummaryEntry.fromJson(
           jsonDecode(raw) as Map<String, dynamic>,
         ));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('SUMMARY_STORE: failed to decode summary: $e');
+      }
     }
     out.sort((a, b) {
       final scoreA = _score(a);
@@ -106,6 +110,11 @@ class ConversationSummaryStore {
     final ids = _getIndexedIds(roleId);
     await _boxOrThrow.deleteAll(ids);
     await _indexBox?.delete(roleId);
+  }
+
+  Future<void> clearAll() async {
+    await _boxOrThrow.clear();
+    await _indexBox?.clear();
   }
 
   String renderForPrompt(String roleId, String query, {int limit = 3}) {
@@ -152,7 +161,9 @@ class ConversationSummaryStore {
       if (raw == null) continue;
       try {
         entries.add(SummaryEntry.fromJson(jsonDecode(raw) as Map<String, dynamic>));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('SUMMARY_STORE: failed to decode entry during prune: $e');
+      }
     }
     entries.sort((a, b) => _score(a).compareTo(_score(b)));
     final overflow = entries.length - _maxSummariesPerRole;

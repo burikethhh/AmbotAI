@@ -9,7 +9,7 @@ class CodeEditorPanel extends StatefulWidget {
   final List<ProjectFile> projectFiles;
   final int selectedFileIndex;
   final ValueChanged<int> onSelectFile;
-  final VoidCallback onDeleteFile;
+  final ValueChanged<int> onDeleteFile;
 
   const CodeEditorPanel({
     super.key,
@@ -167,7 +167,7 @@ class _CodeEditorPanelState extends State<CodeEditorPanel> {
                       onTap: () {
                         final idx = widget.projectFiles.indexOf(file);
                         if (idx != -1 && widget.projectFiles.length > 1) {
-                          widget.onDeleteFile();
+                          widget.onDeleteFile(idx);
                         }
                       },
                       child: Padding(

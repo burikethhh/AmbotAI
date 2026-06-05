@@ -16,6 +16,7 @@ class ApiKeySection extends StatelessWidget {
   final bool hasUserHuggingFace;
   final bool hasUserNvidia;
   final bool hasUserNvidia2;
+  final VoidCallback? onEdit;
 
   const ApiKeySection({
     super.key,
@@ -30,6 +31,7 @@ class ApiKeySection extends StatelessWidget {
     required this.hasUserHuggingFace,
     required this.hasUserNvidia,
     required this.hasUserNvidia2,
+    this.onEdit,
   });
 
   @override
@@ -113,6 +115,18 @@ class ApiKeySection extends StatelessWidget {
                 : 'No API keys configured. Add keys in api_keys.dart or paste above.',
             style: AppTypography.bodySmall(textSecondary),
           ),
+          if (onEdit != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit, size: 16),
+                label: Text('EDIT API KEYS',
+                    style: AppTypography.labelSmall(textPrimary)),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -75,7 +75,9 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
   Future<void> _openSettings() async {
     try {
       await _channel.invokeMethod('requestPermission');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('ACCESSIBILITY: requestPermission failed: $e');
+    }
     _startPolling();
   }
 
@@ -100,6 +102,7 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.close, color: textPrimary),
+          tooltip: 'Close',
           onPressed: widget.onSkip,
         ),
         title: Text(

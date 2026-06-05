@@ -53,7 +53,9 @@ class PiperVoiceGen implements VoiceGenEngine {
   Future<void> dispose() async {
     try {
       await _channel.invokeMethod('dispose');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PIPER: dispose failed: $e');
+    }
     _isReady = false;
   }
 
@@ -73,20 +75,25 @@ class AudioPlaybackService {
   static Future<void> play(String filePath) async {
     try {
       await _channel.invokeMethod('play', {'path': filePath});
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PIPER: play failed: $e');
+    }
   }
 
   static Future<void> stop() async {
     try {
       await _channel.invokeMethod('stop');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PIPER: stop failed: $e');
+    }
   }
 
   static Future<bool> isPlaying() async {
     try {
       final result = await _channel.invokeMethod('isPlaying');
       return result == true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('PIPER: isPlaying failed: $e');
       return false;
     }
   }

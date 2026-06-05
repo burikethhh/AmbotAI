@@ -19,4 +19,8 @@ abstract class AIEngine {
   /// Called when the OS signals low memory. Engines should free
   /// non-essential resources (KV cache, temporary buffers).
   Future<void> handleMemoryPressure() async {}
+
+  /// Cancel an in-progress [generateStream] call.
+  /// After calling cancel(), the stream should stop yielding events.
+  void cancelStream() {}
 }

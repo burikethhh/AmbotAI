@@ -33,7 +33,10 @@ class MockAIEngine implements AIEngine {
   }
 
   @override
-  Future<void> handleMemoryPressure() async {} // no-op for mock
+  Future<void> handleMemoryPressure() async {}
+
+  @override
+  void cancelStream() {}
 
   @override
   String get engineName => 'Mock Engine (Development)';

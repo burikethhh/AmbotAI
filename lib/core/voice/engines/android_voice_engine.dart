@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../voice_service.dart';
@@ -159,14 +160,18 @@ class AndroidVoiceEngine implements VoiceService {
   Future<void> stopListening() async {
     try {
       await _channel.invokeMethod('stopListening');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_ENGINE: stopListening failed: $e');
+    }
   }
 
   @override
   Future<void> cancel() async {
     try {
       await _channel.invokeMethod('cancelListening');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_ENGINE: cancel failed: $e');
+    }
   }
 
   @override
@@ -186,7 +191,9 @@ class AndroidVoiceEngine implements VoiceService {
   Future<void> stopSpeaking() async {
     try {
       await _channel.invokeMethod('stopSpeaking');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_ENGINE: stopSpeaking failed: $e');
+    }
   }
 
   @override
@@ -199,7 +206,9 @@ class AndroidVoiceEngine implements VoiceService {
         'pitch': settings.pitch,
         'offlineOnly': settings.offlineOnly,
       });
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_ENGINE: applySettings failed: $e');
+    }
   }
 
   @override
@@ -208,7 +217,9 @@ class AndroidVoiceEngine implements VoiceService {
     await stopSpeaking();
     try {
       await _channel.invokeMethod('dispose');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_ENGINE: dispose failed: $e');
+    }
     _resultController.close();
     _errorController.close();
     _initialized = false;

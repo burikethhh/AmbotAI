@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../services/chat_service.dart';
@@ -71,7 +72,9 @@ class ConversationStore {
         conversations.add(Conversation.fromJson(
           jsonDecode(raw) as Map<String, dynamic>,
         ));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('CONV_STORE: failed to decode conversation: $e');
+      }
     }
     conversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return conversations;
@@ -88,7 +91,9 @@ class ConversationStore {
         if (decoded is Map<String, dynamic>) {
           all.add(Conversation.fromJson(decoded));
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('CONV_STORE: failed to decode conversation in getAll: $e');
+      }
     }
     all.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return all;

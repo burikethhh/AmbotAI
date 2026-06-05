@@ -137,7 +137,9 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
 
     try {
       await WakelockPlus.enable();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('IMG_MODEL_MGR: wakelock enable failed: $e');
+    }
 
     state = ImageModelState(
       status: ImageModelStatus.downloading,
@@ -184,8 +186,8 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
             await _downloadTaesd(taesdFile, taesdModel);
             taesdPath = taesdFile.path;
             await prefs.setString(_prefsKeyTaesdPath, taesdPath);
-          } catch (_) {
-            // TAESD download failed, continue without it
+          } catch (e) {
+            debugPrint('IMG_MODEL_MGR: TAESD download failed: $e');
           }
         } else {
           taesdPath = taesdFile.path;
@@ -213,7 +215,9 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
     } finally {
       try {
         await WakelockPlus.disable();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('IMG_MODEL_MGR: wakelock disable failed: $e');
+      }
     }
   }
 
@@ -250,13 +254,17 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
       try {
         final file = File(state.localPath!);
         if (await file.exists()) await file.delete();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('IMG_MODEL_MGR: failed to delete model file: $e');
+      }
     }
     if (state.taesdPath != null) {
       try {
         final file = File(state.taesdPath!);
         if (await file.exists()) await file.delete();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('IMG_MODEL_MGR: failed to delete taesd file: $e');
+      }
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -301,7 +309,9 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('IMG_MODEL_MGR: scan for models failed: $e');
+    }
   }
 
   static Future<Directory> _getModelsDirectory() async {
@@ -315,7 +325,9 @@ class ImageModelManager extends StateNotifier<ImageModelState> {
           }
           return modelsDir;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('IMG_MODEL_MGR: external storage dir failed: $e');
+      }
     }
     final appDir = await getApplicationDocumentsDirectory();
     final modelsDir = Directory('${appDir.path}/models');

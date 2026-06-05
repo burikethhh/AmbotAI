@@ -248,6 +248,7 @@ class _AppLauncherDialogState extends State<AppLauncherDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -263,6 +264,7 @@ class _AppLauncherDialogState extends State<AppLauncherDialog> {
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
+                          tooltip: 'Clear search',
                           onPressed: () => _searchController.clear(),
                         )
                       : null,

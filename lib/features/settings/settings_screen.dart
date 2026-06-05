@@ -5,8 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/ai/capability_detector.dart';
 import '../../core/ai/engine_selector.dart';
 import '../../core/ai/model_registry.dart';
+import '../../core/memory/conversation_summary_store.dart';
+import '../../core/memory/memory_service.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/conversation_store.dart';
 import '../../core/services/daily_limit_tracker.dart';
+import '../../features/programmer/programmer_store.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
@@ -65,6 +69,103 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showApiKeyEditor() {
+    final r = ref;
+    final openRouterCtrl = TextEditingController(text: r.read(userOpenRouterKeyProvider) ?? '');
+    final geminiCtrl = TextEditingController(text: r.read(userGeminiKeyProvider) ?? '');
+    final qwenCtrl = TextEditingController(text: r.read(userQwenKeyProvider) ?? '');
+    final hfCtrl = TextEditingController(text: r.read(userHfTokenProvider) ?? '');
+    final nvidia1Ctrl = TextEditingController(text: r.read(userNvidiaKeyProvider) ?? '');
+    final nvidia2Ctrl = TextEditingController(text: r.read(userNvidiaKey2Provider) ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('EDIT API KEYS'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _keyField('OpenRouter', openRouterCtrl),
+              _keyField('Gemini', geminiCtrl),
+              _keyField('Qwen', qwenCtrl),
+              _keyField('Hugging Face', hfCtrl),
+              _keyField('NVIDIA Key 1', nvidia1Ctrl),
+              _keyField('NVIDIA Key 2', nvidia2Ctrl),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              final r = ref;
+              r.read(userOpenRouterKeyProvider.notifier).set(openRouterCtrl.text.isNotEmpty ? openRouterCtrl.text : null);
+              r.read(userGeminiKeyProvider.notifier).set(geminiCtrl.text.isNotEmpty ? geminiCtrl.text : null);
+              r.read(userQwenKeyProvider.notifier).set(qwenCtrl.text.isNotEmpty ? qwenCtrl.text : null);
+              r.read(userHfTokenProvider.notifier).set(hfCtrl.text.isNotEmpty ? hfCtrl.text : null);
+              r.read(userNvidiaKeyProvider.notifier).set(nvidia1Ctrl.text.isNotEmpty ? nvidia1Ctrl.text : null);
+              r.read(userNvidiaKey2Provider.notifier).set(nvidia2Ctrl.text.isNotEmpty ? nvidia2Ctrl.text : null);
+              Navigator.pop(ctx);
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _keyField(String label, TextEditingController ctrl) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextField(
+        controller: ctrl,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        ),
+        style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+        maxLines: 1,
+      ),
+    );
+  }
+
+  Future<void> _confirmWipeAll(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('WIPE ALL DATA?'),
+        content: const Text(
+          'This will permanently delete all conversations, memory, summaries, and '
+          'programmer projects. API keys and settings are preserved.\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('WIPE', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(this.context);
+    await ConversationStore.instance.deleteAll();
+    await MemoryService.instance.wipeAll();
+    await ConversationSummaryStore.instance.clearAll();
+    await ProgrammerStore.instance.clearCurrentProject();
+
+    if (mounted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('All data wiped successfully.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
@@ -102,6 +203,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.textPrimary),
+          tooltip: 'Back',
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -282,6 +384,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               hasUserHuggingFace: ref.watch(userHfTokenProvider) != null,
               hasUserNvidia: ref.watch(userNvidiaKeyProvider) != null,
               hasUserNvidia2: ref.watch(userNvidiaKey2Provider) != null,
+              onEdit: _showApiKeyEditor,
+            ),
+          ),
+
+          // Data Reset section
+          AppSection(
+            title: 'DATA',
+            child: AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'WIPE ALL DATA',
+                    style: AppTypography.bodyLarge(c.textPrimary),
+                  ),
+                  AppSpacing.h4,
+                  Text(
+                    'Delete all conversations, summaries, memory, and programmer projects. '
+                    'Settings and API keys are preserved.',
+                    style: AppTypography.bodySmall(c.textSecondary),
+                  ),
+                  AppSpacing.h12,
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmWipeAll(context),
+                      icon: Icon(Icons.delete_forever, color: AppColors.danger, size: 18),
+                      label: Text(
+                        'WIPE ALL DATA',
+                        style: AppTypography.labelMedium(AppColors.danger),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.danger.withValues(alpha: 0.4), width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 

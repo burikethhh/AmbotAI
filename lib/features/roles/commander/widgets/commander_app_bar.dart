@@ -32,6 +32,7 @@ class AgentAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: textPrimary),
+        tooltip: 'Back',
         onPressed: onBack,
       ),
       title: Text(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ModelDownloader {
@@ -51,7 +52,9 @@ class ModelDownloader {
 
     try {
       await WakelockPlus.enable();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('MODEL_DL: wakelock enable failed: $e');
+    }
 
     try {
       final dir = Directory(destinationDir);
@@ -164,7 +167,9 @@ class ModelDownloader {
       _httpClient = null;
       try {
         await WakelockPlus.disable();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('MODEL_DL: wakelock disable failed: $e');
+      }
     }
   }
 }

@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'image_gen_engine.dart';
 import 'nvidia_image_gen.dart';
@@ -82,7 +83,9 @@ class CloudImageGenEngine implements ImageGenEngine {
           guidanceScale: guidanceScale,
           seed: actualSeed,
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('CLOUD_IMG: HuggingFace fallback failed: $e');
+      }
     }
 
     if (imageBytes == null || imageBytes.isEmpty) {
@@ -151,7 +154,9 @@ class CloudImageGenEngine implements ImageGenEngine {
         if (imageBytes != null && imageBytes.isNotEmpty) {
           yield const ImageGenProgress(progress: 0.9, status: 'Processing image...');
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('CLOUD_IMG: HuggingFace fallback failed (genWithProgress): $e');
+      }
     }
 
     if (imageBytes == null || imageBytes.isEmpty) {

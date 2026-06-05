@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'action.dart';
 import 'device_controller.dart';
@@ -55,7 +56,9 @@ class ActionLog {
         out.add(LogEntry.fromJson(
           jsonDecode(raw) as Map<String, dynamic>,
         ));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('ACTION_LOG: failed to decode entry: $e');
+      }
     }
     out.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return out;

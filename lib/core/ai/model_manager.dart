@@ -78,6 +78,7 @@ class ModelState implements DownloadableState {
 // --- Model Manager ---
 
 class ModelManager extends StateNotifier<ModelState> {
+  ModelState get currentState => state;
   ModelManager() : super(const ModelState());
 
   final ModelDownloader _downloader = ModelDownloader(throwOnCancel: false);
@@ -154,11 +155,13 @@ class ModelManager extends StateNotifier<ModelState> {
     if (state.modelId == null) return;
     final model = ModelRegistry.getById(state.modelId!);
     if (model != null) {
-      try {
-        final dir = await _getModelsDirectory();
-        final tempFile = File('${dir.path}/${model.fileName}.tmp');
-        if (await tempFile.exists()) await tempFile.delete();
-      } catch (_) {}
+    try {
+      final dir = await _getModelsDirectory();
+      final tempFile = File('${dir.path}/${model.fileName}.tmp');
+      if (await tempFile.exists()) await tempFile.delete();
+    } catch (e) {
+      debugPrint('MODEL_MGR: failed to delete temp file: $e');
+    }
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKeyDownloadingId);
@@ -178,7 +181,9 @@ class ModelManager extends StateNotifier<ModelState> {
 
     try {
       await WakelockPlus.enable();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('MODEL_MGR: wakelock enable failed: $e');
+    }
 
     state = ModelState(
       status: ModelStatus.downloading,
@@ -190,7 +195,9 @@ class ModelManager extends StateNotifier<ModelState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKeyDownloadingId, model.id);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('MODEL_MGR: failed to persist downloading state: $e');
+    }
 
     try {
       final dir = await _getModelsDirectory();
@@ -234,7 +241,9 @@ class ModelManager extends StateNotifier<ModelState> {
     } finally {
       try {
         await WakelockPlus.disable();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('MODEL_MGR: wakelock disable failed: $e');
+      }
     }
   }
 

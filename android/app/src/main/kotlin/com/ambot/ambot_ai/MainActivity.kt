@@ -300,8 +300,66 @@ class MainActivity : FlutterActivity() {
                     result.error("MISSING_PACKAGE", "packageName is required", null)
                 }
             }
+            "goHome" -> {
+                try {
+                    val intent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                    result.success("Navigated to home screen")
+                } catch (e: Exception) {
+                    result.error("HOME_FAILED", e.message, null)
+                }
+            }
+            "getTime" -> {
+                val now = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                    .format(java.util.Date())
+                result.success("Current time is $now")
+            }
             "scrollDown", "scrollUp", "goBack", "deepLinkApp", "clickText" -> {
                 result.error("SERVICE_REQUIRED", "Enable Accessibility Service to use scroll, back, and tap features", null)
+            }
+            "createNote" -> {
+                val title = args?.get("title") as? String ?: "Note"
+                val content = args?.get("content") as? String ?: ""
+                try {
+                    val intent = Intent(Intent.ACTION_INSERT).apply {
+                        setType("vnd.android.cursor.item/note")
+                        putExtra(Intent.EXTRA_TITLE, title)
+                        putExtra(Intent.EXTRA_TEXT, content)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                    result.success("Note creation opened: $title")
+                } catch (e: Exception) {
+                    result.error("NOTE_FAILED", e.message, null)
+                }
+            }
+            "takeScreenshot" -> {
+                val bytes = ScreenCaptureService.captureScreenshot()
+                if (bytes != null) {
+                    result.success(bytes)
+                } else {
+                    result.error("SCREENSHOT_FAILED", "Screen capture not available. Start screen capture first.", null)
+                }
+            }
+            "openPlayStore" -> {
+                val packageName = args?.get("packageName") as? String ?: ""
+                if (packageName.isEmpty()) {
+                    result.error("MISSING_PACKAGE", "packageName is required", null)
+                } else {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            data = android.net.Uri.parse("market://details?id=$packageName")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(intent)
+                        result.success("Opened Play Store for $packageName")
+                    } catch (e: Exception) {
+                        result.error("PLAYSTORE_FAILED", e.message, null)
+                    }
+                }
             }
             "emergencyStop" -> {
                 result.success("Stopped (accessibility service not active)")

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 enum OutputType { documents, images, voice }
@@ -73,7 +74,9 @@ class OutputStorageService {
         }
         final files = await Future.wait(fileFutures);
         results.addAll(files.whereType<OutputFileInfo>());
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('OUTPUT_STORE: failed to list files: $e');
+      }
     }
     results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return results;
@@ -132,7 +135,9 @@ class OutputStorageService {
         await for (final entity in d.list()) {
           if (entity is File) total += await entity.length();
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('OUTPUT_STORE: failed to calculate total size: $e');
+      }
     }
     return total;
   }

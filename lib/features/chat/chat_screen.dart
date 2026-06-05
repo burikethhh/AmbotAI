@@ -14,8 +14,7 @@ import '../../core/services/conversation_store.dart';
 import '../../core/services/daily_limit_tracker.dart';
 import '../../core/services/haptic_feedback_service.dart';
 import '../../core/services/document_reader.dart';
-import '../../core/voice/engines/android_voice_engine.dart';
-import '../../core/voice/voice_service.dart';
+
 import '../../core/image_gen/cloud_image_gen.dart';
 import '../../core/image_gen/local_image_gen.dart';
 import '../../core/image_gen/prompt_enhancer.dart';
@@ -26,13 +25,17 @@ import '../../core/ai/engine_selector.dart' show EngineMode;
 import '../../core/ai/model_prompt.dart';
 import '../../core/ai/nvidia_vision.dart';
 import '../../shared/theme/app_colors.dart';
-import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
+import 'chat_utils.dart';
 import 'widgets/chat_app_bar.dart';
 import 'widgets/system_message.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/context_panel.dart';
 import 'widgets/conversation_list.dart';
+import 'widgets/image_gen_dialog.dart';
+import 'widgets/doc_gen_dialog.dart';
+import 'widgets/pending_attachment_bar.dart';
+import 'mixins/voice_mixin.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final Role role;
@@ -49,7 +52,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, VoiceMixin<ChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
@@ -63,13 +66,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   double _imageGenProgress = 0.0;
 
   late AnimationController _welcomeController;
-
-  // Voice
-  final VoiceService _voiceService = AndroidVoiceEngine();
-  VoiceState _voiceState = VoiceState.idle;
-  bool _voiceEnabled = false;
-  StreamSubscription? _voiceResultSub;
-  StreamSubscription? _voiceErrorSub;
 
   // Image generation - cloud NVIDIA + local SD fallback
   late LocalImageGenEngine _localImageEngine;
@@ -159,31 +155,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     });
   }
 
-  Future<void> _initVoice() async {
-    await _voiceService.initialize();
-    final available = await _voiceService.isSpeechAvailable;
-    if (!mounted) return;
-    setState(() => _voiceEnabled = available);
-    if (available) {
-      _voiceResultSub = _voiceService.onResult.listen((result) {
-        if (!mounted || result.isPartial || result.text.isEmpty) return;
-        setState(() {
-          _voiceState = VoiceState.idle;
-          _controller.text = result.text;
-        });
-        _sendMessage();
-      });
-      _voiceErrorSub = _voiceService.onError.listen((_) {
-        if (mounted) setState(() => _voiceState = VoiceState.idle);
-      });
-    }
-  }
+  Future<void> _initVoice() => initVoice((text) {
+    _controller.text = text;
+    _sendMessage();
+  });
 
   @override
   void dispose() {
-    _voiceResultSub?.cancel();
-    _voiceErrorSub?.cancel();
-    _voiceService.dispose();
+    disposeVoice();
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -280,13 +259,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
 
     // Check if this is an image generation request
-    if (_isImageRequest(text)) {
+    if (isImageRequest(text)) {
       await _generateImage(text);
       return;
     }
 
     // Check if this is a document generation request
-    if (_isDocumentRequest(text)) {
+    if (isDocumentRequest(text)) {
       await _generateDocument(text);
       return;
     }
@@ -513,7 +492,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
          if (lastUpdate == null ||
              now.difference(lastUpdate).inMilliseconds >= 16) {
            lastUpdate = now;
-           final parsed = _parseResponse(buffer.toString());
+           final parsed = parseResponse(buffer.toString());
            if (!mounted) return;
            setState(() {
              _messages = [
@@ -530,7 +509,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
        }
       if (!mounted) return;
       // Final update
-      final parsed = _parseResponse(buffer.toString());
+      final parsed = parseResponse(buffer.toString());
       setState(() {
         _messages = [
           ..._messages.sublist(0, _messages.length - 1),
@@ -591,7 +570,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     if (!mounted) return;
     final fullContent = buffer.toString().trim();
-    final parsed = _parseResponse(fullContent);
+    final parsed = parseResponse(fullContent);
     final finalMessage = ChatMessage(
       content: parsed.content,
       role: MessageRole.assistant,
@@ -643,37 +622,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (userMsgCount > 0 && userMsgCount % 10 == 0) {
       await _extractConversationSummary(conversation.id);
     }
-  }
-
-  bool _isImageRequest(String text) {
-    final lower = text.toLowerCase();
-    return lower.contains('generate image') ||
-        lower.contains('create image') ||
-        lower.contains('draw ') ||
-        lower.contains('generate picture') ||
-        lower.contains('create picture') ||
-        lower.contains('make an image') ||
-        lower.contains('make a picture') ||
-        lower.contains('generate a photo') ||
-        lower.contains('create a photo') ||
-        (lower.startsWith('image:') || lower.startsWith('image ')) ||
-        (lower.startsWith('draw:') || lower.startsWith('draw '));
-  }
-
-  bool _isDocumentRequest(String text) {
-    final lower = text.toLowerCase();
-    return lower.contains('generate document') ||
-        lower.contains('create document') ||
-        lower.contains('generate study guide') ||
-        lower.contains('create study guide') ||
-        lower.contains('generate quiz') ||
-        lower.contains('create quiz') ||
-        lower.contains('generate flashcard') ||
-        lower.contains('create flashcard') ||
-        lower.contains('generate summary') ||
-        lower.contains('create summary') ||
-        lower.contains('generate lesson plan') ||
-        lower.contains('create lesson plan');
   }
 
   Future<void> _generateImage(String prompt) async {
@@ -741,7 +689,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             await _imageLimitTracker.increment();
             if (mounted) setState(() => _remainingImageGenToday--);
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('CHAT: cloud image gen failed: $e');
+        }
       }
 
       // 2. Fall back to local SD if cloud failed
@@ -749,7 +699,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         final llmEngine = ref.read(aiEngineProvider);
         final wasLlmReady = llmEngine.isReady;
         if (wasLlmReady) {
-          try { await llmEngine.dispose(); } catch (_) {}
+          try {
+            await llmEngine.dispose();
+          } catch (e) {
+            debugPrint('CHAT: llm dispose failed: $e');
+          }
         }
 
         try {
@@ -771,7 +725,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             try {
               await llmEngine.initialize();
               _localImageEngine.setLlmEngine(llmEngine);
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('CHAT: llm reinitialize failed: $e');
+            }
           }
         }
       }
@@ -1023,43 +979,6 @@ TOPICS: [keyword1], [keyword2], [keyword3]
     }
   }
 
-  ({String content, String? thinking, List<String>? planSteps})
-  _parseResponse(String raw) {
-    String? thinking;
-    List<String>? planSteps;
-    String content = raw;
-
-    // Single-pass extraction for better performance
-    final thinkingStart = raw.indexOf('<thinking>');
-    if (thinkingStart != -1) {
-      final thinkingEnd = raw.indexOf('</thinking>', thinkingStart);
-      if (thinkingEnd != -1) {
-        thinking = raw.substring(thinkingStart + 10, thinkingEnd).trim();
-        // Remove thinking tag from content
-        content = raw.replaceRange(thinkingStart, thinkingEnd + 11, '').trim();
-      }
-    }
-
-    // Extract plan from the (possibly already cleaned) content
-    final planStart = content.indexOf('<plan>');
-    if (planStart != -1) {
-      final planEnd = content.indexOf('</plan>', planStart);
-      if (planEnd != -1) {
-        final planRaw = content.substring(planStart + 6, planEnd).trim();
-        planSteps = planRaw
-            .split('\n')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .map((s) => s.replaceFirst(RegExp(r'^Step\s*\d+:\s*'), ''))
-            .toList();
-        // Remove plan tag from content
-        content = content.replaceRange(planStart, planEnd + 7, '').trim();
-      }
-    }
-
-    return (content: content, thinking: thinking, planSteps: planSteps);
-  }
-
   Future<void> _retryLastMessage() async {
     if (_lastUserMessage == null || _isStreaming) return;
     final text = _lastUserMessage!;
@@ -1073,245 +992,7 @@ TOPICS: [keyword1], [keyword2], [keyword3]
 
   Future<void> _toggleVoice() async {
     HapticFeedbackService.tap();
-    if (_voiceState == VoiceState.listening) {
-      await _voiceService.stopListening();
-      if (mounted) setState(() => _voiceState = VoiceState.idle);
-    } else {
-      if (mounted) setState(() => _voiceState = VoiceState.listening);
-      await _voiceService.startListening(continuous: false);
-    }
-  }
-
-  void _showImageGenDialog() {
-    HapticFeedbackService.tap();
-    final c = ref.read(themeColorsProvider);
-
-    final promptController = TextEditingController();
-    String selectedResolution = '512x512';
-    int selectedSteps = 4;
-    int selectedSeed = -1;
-    final resolutions = ['512x512', '512x768', '768x512', '768x768', '1024x1024'];
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: c.isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          title: Row(
-            children: [
-              Icon(Icons.image_outlined, color: c.textPrimary),
-              const SizedBox(width: 8),
-              Text('Generate Image', style: AppTypography.headlineSmall(c.textPrimary)),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_remainingImageGenToday < _dailyImageLimit)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.auto_awesome, size: 14, color: c.textSecondary),
-                        const SizedBox(width: 6),
-                        Text('$_remainingImageGenToday/$_dailyImageLimit cloud today',
-                          style: AppTypography.labelSmall(c.textSecondary)),
-                      ],
-                    ),
-                  ),
-                TextField(
-                  controller: promptController,
-                  decoration: InputDecoration(
-                    hintText: 'Describe the image you want to create...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: c.cardColor,
-                  ),
-                  maxLines: 3,
-                  autofocus: true,
-                ),
-                const SizedBox(height: 16),
-                // Resolution selector
-                Row(children: [
-                  Icon(Icons.aspect_ratio, size: 18, color: c.textSecondary),
-                  const SizedBox(width: 8),
-                  Text('Resolution', style: AppTypography.labelMedium(c.textSecondary)),
-                ]),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: resolutions.map((res) => Material(
-                    color: selectedResolution == res ? c.accent.withValues(alpha: 0.2) : c.cardColor,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      onTap: () => setDialogState(() => selectedResolution = res),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Text(res, style: AppTypography.labelMedium(
-                          selectedResolution == res ? c.accent : c.textSecondary,
-                        )),
-                      ),
-                    ),
-                  )).toList(),
-                ),
-                const SizedBox(height: 16),
-                // Steps selector
-                Row(children: [
-                  Icon(Icons.speed, size: 18, color: c.textSecondary),
-                  const SizedBox(width: 8),
-                  Text('Steps: $selectedSteps', style: AppTypography.labelMedium(c.textSecondary)),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.remove, size: 20),
-                    onPressed: selectedSteps > 1 ? () => setDialogState(() => selectedSteps--) : null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add, size: 20),
-                    onPressed: selectedSteps < 20 ? () => setDialogState(() => selectedSteps++) : null,
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                // Quick suggestions
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    'A futuristic city at sunset',
-                    'A cute robot reading a book',
-                    'Abstract colorful patterns',
-                    'A peaceful mountain landscape',
-                  ].map((suggestion) => Material(
-                    color: c.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      onTap: () {
-                        promptController.text = suggestion;
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: Text(suggestion, style: AppTypography.labelSmall(c.textSecondary)),
-                      ),
-                    ),
-                  )).toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: TextStyle(color: c.textSecondary)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final prompt = promptController.text.trim();
-                if (prompt.isNotEmpty) {
-                  Navigator.pop(ctx);
-                  final parts = selectedResolution.split('x');
-                  final width = int.parse(parts[0]);
-                  final height = int.parse(parts[1]);
-                  _controller.text = 'Generate image: $prompt';
-                  _sendMessage();
-                  // Store generation settings for use in _generateImage
-                  _imageGenSettings = (width: width, height: height, steps: selectedSteps, seed: selectedSeed);
-                }
-              },
-              child: const Text('Generate'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDocGenDialog() {
-    HapticFeedbackService.tap();
-    final c = ref.read(themeColorsProvider);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        title: Row(
-          children: [
-            Icon(Icons.description_outlined, color: c.textPrimary),
-            const SizedBox(width: 8),
-            Text('Generate Document', style: AppTypography.headlineSmall(c.textPrimary)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DocTypeTile(
-              icon: Icons.menu_book,
-              label: 'Study Guide',
-              description: 'Create a structured study guide',
-              isDark: c.isDark,
-              onTap: () {
-                Navigator.pop(ctx);
-                _controller.text = 'Generate study guide: ';
-                _focusNode.requestFocus();
-              },
-            ),
-            DocTypeTile(
-              icon: Icons.quiz,
-              label: 'Quiz',
-              description: 'Generate quiz questions',
-              isDark: c.isDark,
-              onTap: () {
-                Navigator.pop(ctx);
-                _controller.text = 'Generate quiz: ';
-                _focusNode.requestFocus();
-              },
-            ),
-            DocTypeTile(
-              icon: Icons.style,
-              label: 'Flashcards',
-              description: 'Create flashcards for studying',
-              isDark: c.isDark,
-              onTap: () {
-                Navigator.pop(ctx);
-                _controller.text = 'Generate flashcards: ';
-                _focusNode.requestFocus();
-              },
-            ),
-            DocTypeTile(
-              icon: Icons.summarize,
-              label: 'Summary',
-              description: 'Generate a concise summary',
-              isDark: c.isDark,
-              onTap: () {
-                Navigator.pop(ctx);
-                _controller.text = 'Generate summary: ';
-                _focusNode.requestFocus();
-              },
-            ),
-            DocTypeTile(
-              icon: Icons.school,
-              label: 'Lesson Plan',
-              description: 'Create a lesson plan',
-              isDark: c.isDark,
-              onTap: () {
-                Navigator.pop(ctx);
-                _controller.text = 'Generate lesson plan: ';
-                _focusNode.requestFocus();
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: c.textSecondary)),
-          ),
-        ],
-      ),
-    );
+    await toggleVoice();
   }
 
   void _cycleResponseMode() {
@@ -1385,43 +1066,47 @@ TOPICS: [keyword1], [keyword2], [keyword3]
               },
             ),
           if (_pendingImagePath != null || _pendingFilePath != null)
-            _buildPendingAttachment(c),
+            PendingAttachmentBar(
+              pendingImagePath: _pendingImagePath,
+              pendingFileName: _pendingFileName,
+              colors: c,
+              onClear: _clearPendingAttachment,
+            ),
           ChatInputBar(
             controller: _controller,
             focusNode: _focusNode,
             isDark: c.isDark,
             isStreaming: _isStreaming,
-            voiceEnabled: _voiceEnabled,
-            voiceState: _voiceState,
+            voiceEnabled: voiceMixinEnabled,
+            voiceState: voiceMixinState,
             isGeneratingImage: _isGeneratingImage,
             imageGenProgress: _imageGenProgress,
             onSend: _sendMessage,
             onVoice: _toggleVoice,
-            onImageGen: _showImageGenDialog,
-            onDocGen: _showDocGenDialog,
+            onImageGen: () => showImageGenDialog(
+              context: context,
+              ref: ref,
+              remainingToday: _remainingImageGenToday,
+              dailyLimit: _dailyImageLimit,
+              onGenerate: ({required prompt, required width, required height, required steps, required seed}) {
+                _controller.text = 'Generate image: $prompt';
+                _imageGenSettings = (width: width, height: height, steps: steps, seed: seed);
+                _sendMessage();
+              },
+            ),
+            onDocGen: () => showDocGenDialog(
+              context: context,
+              ref: ref,
+              onSelect: (text) {
+                _controller.text = text;
+                _focusNode.requestFocus();
+              },
+            ),
             onAttachImage: _pickImage,
             onAttachFile: _pickFile,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPendingAttachment(ThemeColors c) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.cardColor,
-        border: Border(top: BorderSide(color: c.borderColor)),
-      ),
-      child: Row(children: [
-        Icon(_pendingImagePath != null ? Icons.image : Icons.attach_file, size: 16, color: c.textSecondary),
-        const SizedBox(width: 8),
-        Expanded(child: Text(
-          _pendingImagePath != null ? 'Image attached' : 'File: ${_pendingFileName ?? ''}',
-          style: AppTypography.labelSmall(c.textSecondary), overflow: TextOverflow.ellipsis)),
-        GestureDetector(onTap: _clearPendingAttachment, child: Icon(Icons.close, size: 16, color: c.textSecondary)),
-      ]),
     );
   }
 

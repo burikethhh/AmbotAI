@@ -84,7 +84,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   void _continue() {
     ref.read(userTypeProvider.notifier).state = _selectedType;
     ref.read(onboardingCompleteProvider.notifier).complete();
-    context.go('/ai-setup');
+    context.go('/onboarding');
   }
 
   void _showQuickGuide() {

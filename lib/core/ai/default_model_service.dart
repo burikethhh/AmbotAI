@@ -43,18 +43,16 @@ class DefaultModelService implements ModelService {
   }
 
   @override
-  ModelState get modelState => ModelState(
-        // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
-        status: modelManager.state.status,
-        // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
-        progress: modelManager.state.progress,
-        // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
-        modelId: modelManager.state.modelId,
-        // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
-        localPath: modelManager.state.localPath,
-        // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
-        error: modelManager.state.error,
-      );
+  ModelState get modelState {
+    final s = modelManager.currentState;
+    return ModelState(
+      status: s.status,
+      progress: s.progress,
+      modelId: s.modelId,
+      localPath: s.localPath,
+      error: s.error,
+    );
+  }
 
   @override
   Future<void> downloadModel(ModelInfo model, {String? hfToken}) async {

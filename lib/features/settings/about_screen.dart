@@ -17,6 +17,7 @@ class AboutScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.textPrimary),
+          tooltip: 'Back',
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(

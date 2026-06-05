@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -13,6 +14,7 @@ import '../../core/image_gen/image_template.dart';
 import '../../core/image_gen/local_image_gen.dart';
 import '../../core/image_gen/prompt_enhancer.dart';
 import '../../core/document_gen/document_gen_service.dart';
+import '../../shared/widgets/code_block.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/connectivity.dart';
 import '../../core/services/document_reader.dart';
@@ -42,6 +44,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
   bool _voiceEnabled = false;
   StreamSubscription? _voiceResultSub;
   StreamSubscription? _voiceErrorSub;
+  StreamSubscription? _aiStreamSub;
 
   late LocalImageGenEngine _localImageEngine;
   late CloudImageGenEngine _cloudImageEngine;
@@ -85,6 +88,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   @override
   void dispose() {
+    _aiStreamSub?.cancel();
     _voiceResultSub?.cancel();
     _voiceErrorSub?.cancel();
     _voiceService.dispose();
@@ -108,6 +112,26 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         );
       }
     });
+  }
+
+  void _exportChat() {
+    if (_messages.isEmpty) return;
+    final text = _messages.map((m) {
+      final role = m.isUser ? 'You' : 'Ambot';
+      final content = m.content;
+      final img = m.imagePath != null ? ' [Image: ${m.imagePath!.split('/').last}]' : '';
+      return '$role: $content$img';
+    }).join('\n---\n');
+    Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Chat copied to clipboard'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // --- Voice ---
@@ -231,7 +255,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     setState(() => _messages.add(aiMessage));
     _scrollToBottom();
 
-    await _streamResponse(text, engine);
+    _streamResponse(text, engine);
   }
 
   Future<void> _sendWithImageAttachment(String text) async {
@@ -305,11 +329,12 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   // --- Streaming ---
 
-  Future<void> _streamResponse(String text, dynamic engine) async {
+  void _streamResponse(String text, dynamic engine) {
     final buffer = StringBuffer();
-    try {
-      await for (final chunk in engine.generateStream(text, systemPrompt:
-          'You are Ambot AI, a general-purpose helpful assistant.')) {
+    _aiStreamSub?.cancel();
+    _aiStreamSub = engine.generateStream(text, systemPrompt:
+        'You are Ambot AI, a general-purpose helpful assistant.').listen(
+      (chunk) {
         buffer.write(chunk);
         if (mounted) {
           setState(() {
@@ -317,18 +342,32 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
           });
           _scrollToBottom();
         }
-      }
-    } catch (e) {
-      final errorText = e.toString().replaceFirst('Exception: ', '');
-      final engineSelection = ref.read(engineSelectionProvider);
-      final mode = engineSelection.when(data: (s) => s.mode, loading: () => null, error: (_, _) => null);
-      if (mode == EngineMode.cloud) {
-        buffer.write('\n\n---\n*Could not reach cloud AI. Check your connection.*');
-      } else {
-        buffer.write('\n\n*Error: $errorText*');
-      }
+      },
+      onError: (e) {
+        final errorText = e.toString().replaceFirst('Exception: ', '');
+        final mode = ref.read(engineSelectionProvider)
+            .when(data: (s) => s.mode, loading: () => null, error: (_, _) => null);
+        if (mode == EngineMode.cloud) {
+          buffer.write('\n\n---\n*Could not reach cloud AI. Check your connection.*');
+        } else {
+          buffer.write('\n\n*Error: $errorText*');
+        }
+        _finalizeMessage(buffer.toString().trim());
+      },
+      onDone: () => _finalizeMessage(buffer.toString().trim()),
+    );
+  }
+
+  void _cancelStream() {
+    _aiStreamSub?.cancel();
+    _aiStreamSub = null;
+    if (mounted && _messages.isNotEmpty) {
+      final last = _messages.last;
+      setState(() {
+        _messages.last = _ChatMessage(content: last.content, isUser: false, isStreaming: false);
+        _isStreaming = false;
+      });
     }
-    _finalizeMessage(buffer.toString().trim());
   }
 
   void _finalizeMessage(String content) {
@@ -368,7 +407,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
           prompt: enhanced, width: 1024, height: 1024, steps: 4)) {
           if (progress.isComplete) imagePath = progress.imagePath;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('GEN_CHAT: cloud image gen failed: $e');
+      }
 
       if (imagePath == null && mounted) {
         try {
@@ -376,7 +417,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
             prompt: enhanced, width: 512, height: 512, steps: 4)) {
             if (progress.isComplete) imagePath = progress.imagePath;
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('GEN_CHAT: local image gen failed: $e');
+        }
       }
 
       if (imagePath != null && mounted) {
@@ -427,7 +470,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: c.textPrimary), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back, color: c.textPrimary), tooltip: 'Back', onPressed: () => Navigator.pop(context)),
         title: Row(children: [
           AmbotAvatar(size: 28, isDark: c.isDark),
           const SizedBox(width: 10),
@@ -436,6 +479,14 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
             Text(engine.isReady ? 'READY' : 'INITIALIZING', style: AppTypography.labelMicro(c.textSecondary)),
           ]),
         ]),
+        actions: [
+          if (_messages.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.share_outlined, color: c.textPrimary, size: 20),
+              tooltip: 'Export chat',
+              onPressed: _exportChat,
+            ),
+        ],
       ),
       body: Column(children: [
         Expanded(child: _messages.isEmpty ? _buildWelcome(c) : ListView.builder(
@@ -468,6 +519,34 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         ),
       )).toList()),
     ])));
+  }
+
+  Widget _buildAiContent(String content, bool isStreaming, ThemeColors c) {
+    if (content.isEmpty && isStreaming) {
+      return Text('...', style: AppTypography.bodyMedium(c.textPrimary));
+    }
+    final segments = parseCodeBlocks(content);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: segments.map((seg) {
+        if (seg.type == 'code') {
+          return CodeBlock(
+            code: seg.content,
+            language: seg.language ?? 'html',
+            borderColor: c.borderColor,
+            textTertiary: c.textTertiary,
+            accent: c.accent,
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text(
+            seg.content,
+            style: AppTypography.bodyMedium(c.textPrimary),
+          ),
+        );
+      }).toList(),
+    );
   }
 
   Widget _buildMessageBubble(_ChatMessage msg, ThemeColors c) {
@@ -503,8 +582,10 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
           ),
           const SizedBox(height: 8),
         ],
-        Text(msg.content.isEmpty && msg.isStreaming ? '...' : msg.content, style: AppTypography.bodyMedium(
-          msg.isUser ? (c.isDark ? AppColors.black : AppColors.white) : c.textPrimary)),
+        msg.isUser
+            ? Text(msg.content, style: AppTypography.bodyMedium(
+                c.isDark ? AppColors.black : AppColors.white))
+            : _buildAiContent(msg.content, msg.isStreaming, c),
         if (msg.isStreaming) const Padding(padding: EdgeInsets.only(top: 4), child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))),
       ]))),
       if (msg.isUser) const SizedBox(width: 8),
@@ -600,14 +681,22 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
             ),
           )),
           const SizedBox(width: 4),
-          GestureDetector(onTap: isDisabled ? null : _sendMessage, child: Container(
-            width: 42, height: 42, decoration: BoxDecoration(
-              color: isDisabled ? AppColors.lightGrey : (c.isDark ? AppColors.white : AppColors.black),
-              shape: BoxShape.circle,
-            ), child: Icon(Icons.send,
-              color: isDisabled ? (c.isDark ? AppColors.grey : AppColors.silver) : (c.isDark ? AppColors.black : AppColors.white),
-              size: 18),
-          )),
+          if (_isStreaming)
+            GestureDetector(onTap: _cancelStream, child: Container(
+              width: 42, height: 42, decoration: BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ), child: const Icon(Icons.stop, color: Colors.white, size: 18),
+            ))
+          else
+            GestureDetector(onTap: isDisabled ? null : _sendMessage, child: Container(
+              width: 42, height: 42, decoration: BoxDecoration(
+                color: isDisabled ? AppColors.lightGrey : (c.isDark ? AppColors.white : AppColors.black),
+                shape: BoxShape.circle,
+              ), child: Icon(Icons.send,
+                color: isDisabled ? (c.isDark ? AppColors.grey : AppColors.silver) : (c.isDark ? AppColors.black : AppColors.white),
+                size: 18),
+            )),
         ]),
       ),
     );

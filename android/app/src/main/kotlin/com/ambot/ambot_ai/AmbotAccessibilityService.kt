@@ -118,9 +118,14 @@ class AmbotAccessibilityService : AccessibilityService() {
             "scrollDown" -> handleScrollDown(args, result)
             "scrollUp" -> handleScrollUp(args, result)
             "goBack" -> handleGoBack(result)
+            "goHome" -> handleGoHome(result)
+            "getTime" -> handleGetTime(result)
             "deepLinkApp" -> handleDeepLinkApp(args, result)
             "clickText" -> handleClickText(args, result)
             "getInstalledApps" -> handleGetInstalledApps(result)
+            "createNote" -> handleCreateNote(args, result)
+            "takeScreenshot" -> handleTakeScreenshot(result)
+            "openPlayStore" -> handleOpenPlayStore(args, result)
             "emergencyStop" -> handleEmergencyStop(result)
             "dispose" -> result.success(null)
             else -> result.notImplemented()
@@ -758,6 +763,87 @@ class AmbotAccessibilityService : AccessibilityService() {
             return
         }
         findAndTapByText(text, result)
+    }
+
+    // --- Home, Time, Note, Screenshot, Play Store ---
+
+    private fun handleGoHome(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            applicationContext.startActivity(intent)
+            result.success("Navigated to home screen")
+        } catch (e: Exception) {
+            result.error("HOME_FAILED", e.message, null)
+        }
+    }
+
+    private fun handleGetTime(result: MethodChannel.Result) {
+        val now = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+            .format(java.util.Date())
+        result.success("Current time is $now")
+    }
+
+    private fun handleCreateNote(args: Map<*, *>?, result: MethodChannel.Result) {
+        val title = args?.get("title") as? String ?: "Note"
+        val content = args?.get("content") as? String ?: ""
+        try {
+            val intent = Intent(Intent.ACTION_INSERT).apply {
+                setType("vnd.android.cursor.item/note")
+                putExtra(Intent.EXTRA_TITLE, title)
+                putExtra(Intent.EXTRA_TEXT, content)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            applicationContext.startActivity(intent)
+            result.success("Note creation opened: $title")
+        } catch (e: Exception) {
+            // Fallback: write note to clipboard
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText(title, content))
+            result.success("Note copied to clipboard (could not open notes app)")
+        }
+    }
+
+    private fun handleTakeScreenshot(result: MethodChannel.Result) {
+        // Try screen capture service first
+        val bytes = ScreenCaptureService.captureScreenshot()
+        if (bytes != null) {
+            result.success(bytes)
+        } else {
+            result.error("SCREENSHOT_FAILED", "Screen capture not available. Start screen capture first.", null)
+        }
+    }
+
+    private fun handleOpenPlayStore(args: Map<*, *>?, result: MethodChannel.Result) {
+        val packageName = args?.get("packageName") as? String ?: ""
+        if (packageName.isEmpty()) {
+            result.error("MISSING_PACKAGE", "packageName is required", null)
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = android.net.Uri.parse("market://details?id=$packageName")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            applicationContext.startActivity(intent)
+            result.success("Opened Play Store for $packageName")
+        } catch (e: android.content.ActivityNotFoundException) {
+            // Fallback to browser
+            try {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = android.net.Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                applicationContext.startActivity(intent)
+                result.success("Opened Play Store web page for $packageName")
+            } catch (e2: Exception) {
+                result.error("PLAYSTORE_FAILED", e2.message, null)
+            }
+        } catch (e: Exception) {
+            result.error("PLAYSTORE_FAILED", e.message, null)
+        }
     }
 
     // --- App List ---

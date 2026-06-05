@@ -54,6 +54,8 @@ class _SettingsAboutSectionState extends State<SettingsAboutSection> {
     setState(() => _checking = false);
 
     if (!mounted) return;
+    final currentVersion = _appVersion;
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => _UpdateDialog(
@@ -62,6 +64,7 @@ class _SettingsAboutSectionState extends State<SettingsAboutSection> {
         textSecondary: widget.textSecondary,
         borderColor: widget.borderColor,
         cardColor: widget.cardColor,
+        appVersion: currentVersion,
         result: result,
       ),
     );
@@ -175,6 +178,7 @@ class _UpdateDialog extends StatelessWidget {
   final Color textSecondary;
   final Color borderColor;
   final Color cardColor;
+  final String appVersion;
   final UpdateCheckResult result;
 
   const _UpdateDialog({
@@ -183,6 +187,7 @@ class _UpdateDialog extends StatelessWidget {
     required this.textSecondary,
     required this.borderColor,
     required this.cardColor,
+    required this.appVersion,
     required this.result,
   });
 
@@ -220,7 +225,7 @@ class _UpdateDialog extends StatelessWidget {
                   if (isUpdate && result.latest!.updateUrl.isNotEmpty) {
                     await launchUrl(Uri.parse(result.latest!.updateUrl), mode: LaunchMode.externalApplication);
                   }
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                 },
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: borderColor, width: 2),
@@ -279,10 +284,10 @@ class _UpdateDialog extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          Text(
-            'Current version: $_appVersion',
-            style: AppTypography.bodySmall(textSecondary),
-          ),
+            Text(
+              'Current version: $appVersion',
+              style: AppTypography.bodySmall(textSecondary),
+            ),
         ];
       case UpdateStatus.error:
         return [
@@ -300,8 +305,6 @@ class _UpdateDialog extends StatelessWidget {
         return [];
     }
   }
-
-  String get _appVersion => '...';
 }
 
 class _SocialIcon extends StatelessWidget {

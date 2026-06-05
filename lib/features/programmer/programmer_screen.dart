@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/engine_providers.dart';
 import '../../core/ai/ai_engine.dart';
+import '../../core/ai/engines/mock_engine.dart';
 import '../../core/ai/engines/openai_engine.dart';
 import '../../core/config/api_keys.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
+import 'highlighted_code_controller.dart';
+import 'programmer_store.dart';
 import 'programmer_types.dart';
 import 'widgets/chat_panel.dart';
 import 'widgets/code_editor_panel.dart';
@@ -55,21 +58,27 @@ class ProgrammerScreen extends ConsumerStatefulWidget {
 class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   int _currentTab = 0;
   int _selectedFileIndex = 0;
-  final List<ProjectFile> _projectFiles = List.from(defaultProject);
+  late final List<ProjectFile> _projectFiles;
   final List<ChatMessage> _messages = [];
   bool _isAiResponding = false;
   int _previewKey = 0;
   bool _engineCheckDone = false;
   final _chatTextController = TextEditingController();
   final _chatScrollController = ScrollController();
-  late final TextEditingController _codeController;
+  late final HighlightedCodeController _codeController;
   late AIEngine _programmerEngine;
   bool _programmerEngineReady = false;
+  Timer? _saveTimer;
 
   @override
   void initState() {
     super.initState();
-    _codeController = TextEditingController(text: _currentFileContent);
+    final saved = ProgrammerStore.instance.loadCurrentProject();
+    _projectFiles = saved != null ? List.from(saved) : List.from(defaultProject);
+    _codeController = HighlightedCodeController(
+      text: _currentFileContent,
+      language: _currentFileLanguage,
+    );
     _initProgrammerEngine();
     _messages.add(ChatMessage(
       role: 'ai',
@@ -82,11 +91,19 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
 
   @override
   void dispose() {
+    _saveTimer?.cancel();
     _chatTextController.dispose();
     _chatScrollController.dispose();
     _codeController.dispose();
     _programmerEngine.dispose();
     super.dispose();
+  }
+
+  void _autoSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 1), () {
+      ProgrammerStore.instance.saveCurrentProject(_projectFiles);
+    });
   }
 
   String get _currentFileContent {
@@ -96,11 +113,19 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     return '';
   }
 
+  String get _currentFileLanguage {
+    if (_selectedFileIndex < _projectFiles.length) {
+      return _projectFiles[_selectedFileIndex].language;
+    }
+    return 'html';
+  }
+
   void _onCodeChanged(String value) {
     if (_selectedFileIndex < _projectFiles.length) {
       final old = _projectFiles[_selectedFileIndex];
       _projectFiles[_selectedFileIndex] = old.copyWith(content: value);
     }
+    _autoSave();
   }
 
   Future<void> _initProgrammerEngine() async {
@@ -139,6 +164,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   void _selectFile(int index) {
     if (index == _selectedFileIndex) return;
     _codeController.text = _projectFiles[index].content;
+    _codeController.language = _projectFiles[index].language;
     setState(() => _selectedFileIndex = index);
   }
 
@@ -325,12 +351,14 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
           (f) => f.filename == filename || f.filename.endsWith(ext));
 
       if (existingIdx != -1) {
+        final newLang = _langFromExt(ext);
         _projectFiles[existingIdx] = _projectFiles[existingIdx].copyWith(
           content: code,
-          language: _langFromExt(ext),
+          language: newLang,
         );
         if (_selectedFileIndex == existingIdx) {
           _codeController.text = code;
+          _codeController.language = newLang;
         }
       } else {
         _projectFiles.add(ProjectFile(
@@ -347,6 +375,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       _previewKey++;
       _switchToCode();
     }
+    _autoSave();
   }
 
   String _filenameFromLanguage(String lang) {
@@ -378,6 +407,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       _previewKey++;
       _switchToCode();
     }
+    _autoSave();
   }
 
   void _scrollChatToBottom() {
@@ -392,12 +422,17 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     });
   }
 
-  void _deleteCurrentFile() {
+  void _deleteCurrentFile(int index) {
     if (_projectFiles.length <= 1) return;
-    _projectFiles.removeAt(_selectedFileIndex);
+    final targetIdx = index.clamp(0, _projectFiles.length - 1);
+    _projectFiles.removeAt(targetIdx);
     final newIdx = _selectedFileIndex.clamp(0, _projectFiles.length - 1);
+    if (_selectedFileIndex > targetIdx || _selectedFileIndex >= _projectFiles.length) {
+      _codeController.text = _projectFiles[newIdx].content;
+    }
     _selectFile(newIdx);
     setState(() {});
+    _autoSave();
   }
 
   void _showAddFileDialog() {
@@ -425,6 +460,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
                 _projectFiles.add(ProjectFile(filename: name, content: '', language: lang));
                 _selectFile(_projectFiles.length - 1);
                 setState(() {});
+                _autoSave();
               }
               Navigator.pop(ctx);
             },
@@ -458,6 +494,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       title: Text('PROGRAMMER', style: AppTypography.headlineSmall(c.textPrimary)),
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: c.textPrimary),
+        tooltip: 'Back',
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
@@ -545,36 +582,4 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         return const SizedBox.shrink();
     }
   }
-}
-
-class MockAIEngine implements AIEngine {
-  @override
-  String get engineName => 'MockAI';
-
-  @override
-  DeviceTier get tier => DeviceTier.lowEnd;
-
-  @override
-  bool get isReady => true;
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<String> generate(String prompt,
-      {String? systemPrompt, List<MessageEntry>? history}) async {
-    return 'Mock AI response. Configure a model or cloud API in Settings.';
-  }
-
-  @override
-  Stream<String> generateStream(String prompt,
-      {String? systemPrompt, List<MessageEntry>? history}) async* {
-    yield 'Mock AI response. Configure a model or cloud API in Settings.';
-  }
-
-  @override
-  Future<void> dispose() async {}
-
-  @override
-  Future<void> handleMemoryPressure() async {}
 }

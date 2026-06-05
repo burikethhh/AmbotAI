@@ -24,7 +24,7 @@ class CloudEngine implements AIEngine {
 
   @override
   Future<String> generate(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async {
-    final body = _buildRequestBody(prompt, systemPrompt);
+    final body = _buildRequestBody(prompt, systemPrompt, history);
     final url = '$_baseUrl/$_model:generateContent';
     final client = _client;
 
@@ -46,7 +46,7 @@ class CloudEngine implements AIEngine {
 
   @override
   Stream<String> generateStream(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async* {
-    final body = _buildRequestBody(prompt, systemPrompt);
+    final body = _buildRequestBody(prompt, systemPrompt, history);
     final url = '$_baseUrl/$_model:streamGenerateContent?alt=sse';
     final client = _client;
 
@@ -98,6 +98,12 @@ class CloudEngine implements AIEngine {
   }
 
   @override
+  void cancelStream() {
+    _client?.close(force: true);
+    _client = HttpClient();
+  }
+
+  @override
   Future<void> handleMemoryPressure() async {} // no-op for cloud
 
   @override
@@ -109,22 +115,25 @@ class CloudEngine implements AIEngine {
   @override
   bool get isReady => _isReady;
 
-  Map<String, dynamic> _buildRequestBody(String prompt, String? systemPrompt) {
+  Map<String, dynamic> _buildRequestBody(String prompt, String? systemPrompt, List<MessageEntry>? history) {
     final contents = <Map<String, dynamic>>[];
 
-    if (systemPrompt != null && systemPrompt.isNotEmpty) {
-      contents.add({
-        'role': 'user',
-        'parts': [
-          {'text': systemPrompt}
-        ],
-      });
-      contents.add({
-        'role': 'model',
-        'parts': [
-          {'text': 'Understood. I will follow those instructions.'}
-        ],
-      });
+    final roleMap = <String, String>{
+      'user': 'user',
+      'assistant': 'model',
+      'ai': 'model',
+    };
+
+    if (history != null) {
+      for (final entry in history) {
+        final geminiRole = roleMap[entry.role] ?? 'user';
+        contents.add({
+          'role': geminiRole,
+          'parts': [
+            {'text': entry.content}
+          ],
+        });
+      }
     }
 
     contents.add({
@@ -135,6 +144,12 @@ class CloudEngine implements AIEngine {
     });
 
     return {
+      if (systemPrompt != null && systemPrompt.isNotEmpty)
+        'systemInstruction': {
+          'parts': [
+            {'text': systemPrompt}
+          ],
+        },
       'contents': contents,
       'generationConfig': {
         'temperature': 0.7,

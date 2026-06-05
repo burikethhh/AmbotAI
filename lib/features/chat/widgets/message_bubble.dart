@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../../../core/services/chat_service.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_typography.dart';
 import '../../../shared/theme/theme_colors.dart';
 import '../../../shared/widgets/ambot_avatar.dart';
+import '../../../shared/widgets/code_block.dart';
 import '../../../core/document_gen/document_gen_service.dart';
 import '../../../core/image_gen/image_template.dart';
 import 'typing_indicator.dart';
@@ -97,8 +99,15 @@ class ChatMessageBubble extends StatelessWidget {
                           code: AppTypography.mono(c.textPrimary).copyWith(
                             backgroundColor: c.cardElevated,
                           ),
+                          codeblockDecoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                           listBullet: AppTypography.bodyMedium(c.textPrimary),
                         ),
+                        builders: {
+                          'codeBlock': _CodeBlockBuilder(c),
+                        },
                       ),
                     const SizedBox(height: 4),
                   ],
@@ -476,15 +485,18 @@ class _AttachmentView extends StatelessWidget {
             backgroundColor: Colors.transparent,
             leading: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
+              tooltip: 'Close',
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.share, color: Colors.white),
+                tooltip: 'Share image',
                 onPressed: () => _shareImage(context, attachment.path),
               ),
               IconButton(
                 icon: const Icon(Icons.download_outlined, color: Colors.white),
+                tooltip: 'Save image',
                 onPressed: () => _saveImage(context, attachment.path),
               ),
             ],
@@ -496,6 +508,25 @@ class _AttachmentView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CodeBlockBuilder extends MarkdownElementBuilder {
+  final ThemeColors c;
+
+  _CodeBlockBuilder(this.c);
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final code = element.textContent;
+    final lang = element.attributes['language'] ?? '';
+    return CodeBlock(
+      code: code,
+      language: lang,
+      borderColor: c.borderColor,
+      textTertiary: c.textTertiary,
+      accent: c.accent,
     );
   }
 }

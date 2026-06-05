@@ -8,6 +8,7 @@ import 'core/memory/conversation_summary_store.dart';
 import 'core/memory/memory_service.dart';
 import 'core/providers/app_providers.dart';
 import 'core/services/conversation_store.dart';
+import 'features/programmer/programmer_store.dart';
 import 'app.dart';
 
 void main() async {
@@ -18,6 +19,7 @@ void main() async {
   await ConversationSummaryStore.instance.init();
   await ActionLog.instance.init();
   await ConversationStore.instance.init();
+  await ProgrammerStore.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

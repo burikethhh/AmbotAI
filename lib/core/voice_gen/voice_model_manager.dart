@@ -127,7 +127,9 @@ class VoiceModelManager extends StateNotifier<VoiceModelState> {
           break;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_MODEL_MGR: auto-detect failed: $e');
+    }
   }
 
   Future<void> downloadModel(ModelInfo model, {String? hfToken}) async {
@@ -141,7 +143,9 @@ class VoiceModelManager extends StateNotifier<VoiceModelState> {
 
     try {
       await WakelockPlus.enable();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VOICE_MODEL_MGR: wakelock enable failed: $e');
+    }
 
     state = VoiceModelState(
       status: VoiceModelStatus.downloading,
@@ -247,7 +251,9 @@ class VoiceModelManager extends StateNotifier<VoiceModelState> {
     } finally {
       try {
         await WakelockPlus.disable();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('VOICE_MODEL_MGR: wakelock disable failed: $e');
+      }
     }
   }
 
@@ -261,10 +267,18 @@ class VoiceModelManager extends StateNotifier<VoiceModelState> {
     final configPath = prefs.getString(_prefsKeyConfigPath);
 
     if (onnxPath != null) {
-      try { await File(onnxPath).delete(); } catch (_) {}
+      try {
+        await File(onnxPath).delete();
+      } catch (e) {
+        debugPrint('VOICE_MODEL_MGR: failed to delete onnx: $e');
+      }
     }
     if (configPath != null) {
-      try { await File(configPath).delete(); } catch (_) {}
+      try {
+        await File(configPath).delete();
+      } catch (e) {
+        debugPrint('VOICE_MODEL_MGR: failed to delete config: $e');
+      }
     }
 
     await prefs.remove(_prefsKeyModelId);
@@ -285,7 +299,9 @@ class VoiceModelManager extends StateNotifier<VoiceModelState> {
           }
           return dir;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('VOICE_MODEL_MGR: external storage dir failed: $e');
+      }
     }
     final appDir = await getApplicationDocumentsDirectory();
     final dir = Directory('${appDir.path}/models/voices');

@@ -86,6 +86,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.close, color: c.textPrimary),
+          tooltip: 'Close',
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
