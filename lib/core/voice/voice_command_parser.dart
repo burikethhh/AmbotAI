@@ -183,20 +183,76 @@ class VoiceCommandParser {
 
     // "turn on/off [setting]"
     final toggleMatch = RegExp(
-      r'\b(?:turn|switch)\s+(?:on|off|enable|disable)\s+(\w+)',
+      r'\b(?:turn|switch)\s+(on|off|enable|disable)\s+(\w+)',
     ).firstMatch(lower);
     if (toggleMatch != null) {
-      final setting = toggleMatch.group(1)!.toLowerCase();
-      final isOn = lower.contains('on') || lower.contains('enable');
+      final isOn = toggleMatch.group(1)!.toLowerCase() == 'on' || toggleMatch.group(1)!.toLowerCase() == 'enable';
+      final setting = toggleMatch.group(2)!.toLowerCase();
       final settingKey = _settingKeyword(setting);
       if (settingKey != null) {
+        final actionId = settingKey == 'flashlight' ? 'toggle_flashlight' : 'toggle_wifi';
         commands.add(ParsedVoiceCommand(
-          action: ActionRegistry.byId('toggle_setting')!,
+          action: ActionRegistry.byId(actionId)!,
           params: {'setting': settingKey, 'value': isOn},
           confidence: 0.85,
           spokenResponse: 'Turning $settingKey ${isOn ? "on" : "off"}',
         ));
       }
+    }
+
+    // Direct toggle commands: "flashlight on/off", "wifi on/off", "dnd on/off"
+    if (commands.isEmpty) {
+      final directToggle = RegExp(
+        r'\b(flashlight|wifi|bluetooth|dnd|do not disturb|location)\s+(on|off|enable|disable)\b',
+      ).firstMatch(lower);
+      if (directToggle != null) {
+        final setting = directToggle.group(1)!.toLowerCase();
+        final isOn = directToggle.group(2)!.toLowerCase() == 'on' || directToggle.group(2)!.toLowerCase() == 'enable';
+        final settingKey = _settingKeyword(setting);
+        if (settingKey != null) {
+          final actionId = settingKey == 'flashlight' ? 'toggle_flashlight'
+              : settingKey == 'wifi' ? 'toggle_wifi'
+              : settingKey == 'bluetooth' ? 'toggle_bluetooth'
+              : settingKey == 'dnd' ? 'toggle_dnd'
+              : 'toggle_wifi';
+          commands.add(ParsedVoiceCommand(
+            action: ActionRegistry.byId(actionId)!,
+            params: {'setting': settingKey, 'value': isOn},
+            confidence: 0.85,
+            spokenResponse: 'Turning $settingKey ${isOn ? "on" : "off"}',
+          ));
+        }
+      }
+    }
+
+    // "silence my phone" / "silent mode" -> DND on
+    if (commands.isEmpty && (lower.contains('silence') || lower.contains('silent'))) {
+      commands.add(ParsedVoiceCommand(
+        action: ActionRegistry.byId('toggle_dnd')!,
+        params: {'setting': 'dnd', 'value': true},
+        confidence: 0.8,
+        spokenResponse: 'Enabling silent mode',
+      ));
+    }
+
+    // "max volume" / "full volume"
+    if (lower.contains('max volume') || lower.contains('full volume') || lower.contains('maximum volume')) {
+      commands.add(ParsedVoiceCommand(
+        action: ActionRegistry.byId('set_volume')!,
+        params: {'stream': 'media', 'level': 100},
+        confidence: 0.9,
+        spokenResponse: 'Setting volume to maximum',
+      ));
+    }
+
+    // "mute" / "mute phone"
+    if (lower == 'mute' || lower.contains('mute phone') || lower == 'mute.') {
+      commands.add(ParsedVoiceCommand(
+        action: ActionRegistry.byId('set_volume')!,
+        params: {'stream': 'media', 'level': 0},
+        confidence: 0.9,
+        spokenResponse: 'Muting volume',
+      ));
     }
 
     // "what's on my screen?" / "read this to me"
@@ -315,38 +371,76 @@ class VoiceCommandParser {
   static List<ParsedVoiceCommand> _parseTimerAlarm(String lower, String original) {
     final commands = <ParsedVoiceCommand>[];
 
-    // "set a timer for [X] minutes/seconds"
-    final timerMatch = RegExp(
-      r'\bset\s+(?:a\s+)?timer\s+(?:for\s+)?(\d+)\s*(minute|minutes|min|second|seconds|sec|s)?',
+    // "wake me up at [time]" / "wake me at [time]"
+    final wakeMatch = RegExp(
+      r'\bwake\s+me\s+(?:up\s+)?(?:at|in)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
     ).firstMatch(lower);
-    if (timerMatch != null) {
-      final value = int.parse(timerMatch.group(1)!);
-      final unit = timerMatch.group(2)?.toLowerCase() ?? 'minutes';
-      final seconds = unit.startsWith('s') ? value : value * 60;
-      commands.add(ParsedVoiceCommand(
-        action: ActionRegistry.byId('set_timer')!,
-        params: {'seconds': seconds},
-        confidence: 0.9,
-        spokenResponse: 'Setting timer for $value $unit',
-      ));
-    }
-
-    // "set an alarm for [X] [AM/PM]"
-    final alarmMatch = RegExp(
-      r'\bset\s+(?:an\s+)?alarm\s+(?:for\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
-    ).firstMatch(lower);
-    if (alarmMatch != null) {
-      var hour = int.parse(alarmMatch.group(1)!);
-      final minute = alarmMatch.group(2) != null ? int.parse(alarmMatch.group(2)!) : 0;
-      final period = alarmMatch.group(3)?.toLowerCase();
+    if (wakeMatch != null) {
+      var hour = int.parse(wakeMatch.group(1)!);
+      final minute = wakeMatch.group(2) != null ? int.parse(wakeMatch.group(2)!) : 0;
+      final period = wakeMatch.group(3)?.toLowerCase();
       if (period == 'pm' && hour < 12) hour += 12;
       if (period == 'am' && hour == 12) hour = 0;
       commands.add(ParsedVoiceCommand(
         action: ActionRegistry.byId('set_alarm')!,
-        params: {'hour': hour, 'minute': minute},
+        params: {'hour': hour, 'minute': minute, 'label': 'Wake up'},
         confidence: 0.9,
         spokenResponse: 'Setting alarm for ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
       ));
+    }
+
+    // "set a timer for [X] minutes/seconds"
+    if (commands.isEmpty) {
+      final timerMatch = RegExp(
+        r'\bset\s+(?:a\s+)?timer\s+(?:for\s+)?(\d+)\s*(minute|minutes|min|second|seconds|sec|s)?',
+      ).firstMatch(lower);
+      if (timerMatch != null) {
+        final value = int.parse(timerMatch.group(1)!);
+        final unit = timerMatch.group(2)?.toLowerCase() ?? 'minutes';
+        final seconds = unit.startsWith('s') ? value : value * 60;
+        commands.add(ParsedVoiceCommand(
+          action: ActionRegistry.byId('set_timer')!,
+          params: {'seconds': seconds},
+          confidence: 0.9,
+          spokenResponse: 'Setting timer for $value $unit',
+        ));
+      }
+    }
+
+    // "set an alarm for [X] [AM/PM]"
+    if (commands.isEmpty) {
+      final alarmMatch = RegExp(
+        r'\bset\s+(?:an\s+)?alarm\s+(?:for\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
+      ).firstMatch(lower);
+      if (alarmMatch != null) {
+        var hour = int.parse(alarmMatch.group(1)!);
+        final minute = alarmMatch.group(2) != null ? int.parse(alarmMatch.group(2)!) : 0;
+        final period = alarmMatch.group(3)?.toLowerCase();
+        if (period == 'pm' && hour < 12) hour += 12;
+        if (period == 'am' && hour == 12) hour = 0;
+        commands.add(ParsedVoiceCommand(
+          action: ActionRegistry.byId('set_alarm')!,
+          params: {'hour': hour, 'minute': minute},
+          confidence: 0.9,
+          spokenResponse: 'Setting alarm for ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
+        ));
+      }
+    }
+
+    // "remind me [to do something] [at time]" — falls back to create_note
+    if (commands.isEmpty) {
+      final remindMatch = RegExp(
+        r'\bremind\s+me\s+(?:to\s+)?(.+?)(?:\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$',
+      ).firstMatch(lower);
+      if (remindMatch != null) {
+        final task = remindMatch.group(1)!.trim();
+        commands.add(ParsedVoiceCommand(
+          action: ActionRegistry.byId('create_note')!,
+          params: {'title': 'Reminder', 'content': task},
+          confidence: 0.7,
+          spokenResponse: 'I will remind you to $task',
+        ));
+      }
     }
 
     return commands;

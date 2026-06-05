@@ -10,6 +10,8 @@ class AgentAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onBack;
   final Color textPrimary;
   final bool isDark;
+  final bool butlerMode;
+  final VoidCallback onToggleButler;
 
   const AgentAppBar({
     super.key,
@@ -18,6 +20,8 @@ class AgentAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onBack,
     required this.textPrimary,
     required this.isDark,
+    this.butlerMode = false,
+    required this.onToggleButler,
   });
 
   @override
@@ -31,10 +35,20 @@ class AgentAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: onBack,
       ),
       title: Text(
-        'AGENT',
+        butlerMode ? 'BUTLER' : 'AGENT',
         style: AppTypography.headlineSmall(textPrimary),
       ),
       actions: [
+        IconButton(
+          icon: Icon(
+            butlerMode ? Icons.diamond : Icons.diamond_outlined,
+            color: butlerMode
+                ? AppColors.success
+                : textPrimary,
+          ),
+          tooltip: butlerMode ? 'Disable butler mode' : 'Enable butler mode',
+          onPressed: onToggleButler,
+        ),
         ExecutionModeSelector(
           mode: mode,
           isDark: isDark,

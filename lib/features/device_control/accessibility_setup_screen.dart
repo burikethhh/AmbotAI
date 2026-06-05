@@ -174,10 +174,33 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
 
           // Steps
           if (!_isEnabled) ...[
+            // Android 13+ restricted settings warning
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF9800).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lock_outline, size: 18, color: const Color(0xFFFF9800)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Android 13+ may require enabling "Allow restricted settings" in Settings → Apps → Ambot AI → tap the three-dot menu → Allow restricted settings. Do this FIRST if the toggle below is grayed out.',
+                      style: AppTypography.bodySmall(textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             _StepCard(
               number: 1,
-              title: 'TAP "OPEN SETTINGS" BELOW',
-              description: 'This will take you to the Android Accessibility settings page.',
+              title: 'ENABLE "ALLOW RESTRICTED SETTINGS" (IF NEEDED)',
+              description: 'Go to Settings → Apps → Ambot AI → ⋮ menu → Allow restricted settings → ON.',
               isCompleted: false,
               isActive: _currentStep == 0,
               isDark: isDark,
@@ -189,8 +212,8 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
             const SizedBox(height: 12),
             _StepCard(
               number: 2,
-              title: 'FIND "AMBOT AI" IN THE LIST',
-              description: 'Scroll to find Ambot AI in your downloaded services.',
+              title: 'TAP "OPEN SETTINGS" BELOW',
+              description: 'This will take you to the Android Accessibility settings page.',
               isCompleted: false,
               isActive: _currentStep == 1,
               isDark: isDark,
@@ -202,8 +225,8 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
             const SizedBox(height: 12),
             _StepCard(
               number: 3,
-              title: 'TOGGLE THE SWITCH ON',
-              description: 'Tap the toggle, then confirm the security warning.',
+              title: 'FIND "AMBOT AI" IN THE LIST',
+              description: 'Scroll to find Ambot AI in your downloaded services.',
               isCompleted: false,
               isActive: _currentStep == 2,
               isDark: isDark,
@@ -215,10 +238,23 @@ class _AccessibilitySetupScreenState extends State<AccessibilitySetupScreen>
             const SizedBox(height: 12),
             _StepCard(
               number: 4,
+              title: 'TOGGLE THE SWITCH ON',
+              description: 'Tap the toggle, then confirm the security warning.',
+              isCompleted: false,
+              isActive: _currentStep == 3,
+              isDark: isDark,
+              cardColor: cardColor,
+              borderColor: borderColor,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+            ),
+            const SizedBox(height: 12),
+            _StepCard(
+              number: 5,
               title: 'RETURN TO AMBOT',
               description: 'Press back to return. Ambot will detect the service automatically.',
               isCompleted: false,
-              isActive: _currentStep == 3,
+              isActive: _currentStep == 4,
               isDark: isDark,
               cardColor: cardColor,
               borderColor: borderColor,

@@ -660,20 +660,7 @@ class AmbotAccessibilityService : AccessibilityService() {
     private fun findScrollableNode(node: AccessibilityNodeInfo?, scrollDown: Boolean): AccessibilityNodeInfo? {
         if (node == null) return null
         if (node.isScrollable) {
-            // Check if can actually scroll in the desired direction
-            if (scrollDown) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (node.canScrollForward()) return node
-                } else {
-                    return node
-                }
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (node.canScrollBackward()) return node
-                } else {
-                    return node
-                }
-            }
+            return node
         }
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->

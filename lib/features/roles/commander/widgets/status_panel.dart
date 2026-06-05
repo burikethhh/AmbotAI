@@ -121,19 +121,46 @@ class StatusPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       color: AppColors.warningOrange.withValues(alpha: 0.1),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_outlined, color: AppColors.warningOrange),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Accessibility Service required.',
-              style: AppTypography.bodySmall(textSecondary),
-            ),
+          Row(
+            children: [
+              Icon(Icons.warning_amber_outlined, color: AppColors.warningOrange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Accessibility Service required.',
+                  style: AppTypography.bodySmall(textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: onSetupPermission,
+                child: const Text('SETUP'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: onSetupPermission,
-            child: const Text('SETUP'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.warningOrange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.warningOrange.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline, size: 16, color: AppColors.warningOrange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Android 13+ may require: Settings → Apps → Ambot AI → ⋮ → Allow restricted settings. Enable it BEFORE toggling accessibility.',
+                    style: AppTypography.bodySmall(textSecondary),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -118,7 +118,9 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
 
       final history = _messages
           .where((m) => m.role == 'user' || (m.role == 'ai' && !m.isStreaming))
-          .map((m) => MessageEntry(role: m.role, content: m.content))
+          .map((m) => MessageEntry(
+              role: m.role == 'ai' ? 'assistant' : 'user',
+              content: m.content))
           .toList();
 
       await for (final chunk in engine.generateStream(

@@ -57,6 +57,7 @@ class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnviro
   VoiceState _voiceState = VoiceState.idle;
   String _liveTranscript = '';
   bool _voiceEnabled = false;
+  bool _butlerMode = false;
 
   final NvidiaVisionService _visionService = NvidiaVisionService();
   late AnimationController _statusPulseController;
@@ -181,15 +182,39 @@ class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnviro
   Future<DeviceAction?> _tryNvidiaCommand(String text) async {
     try {
       final analysis = await _visionService.analyzeDocument(
-        'Parse this device control command into one of these action IDs: '
-        'launch_app, open_url, web_search, set_alarm, set_timer, toggle_wifi, '
-        'toggle_bluetooth, set_volume, set_brightness, scroll_down, scroll_up, '
-        'go_back, click_screen_text, take_screenshot, read_screen, copy_to_clipboard, '
-        'send_sms, send_email, create_note, toggle_dnd.\n\n'
+        'You are a personal butler AI. Parse this user command into a device action.\n\n'
+        'Available action IDs:\n'
+        '- launch_app: Open an app. params: {packageName: string}\n'
+        '- open_url: Open a URL in browser. params: {url: string}\n'
+        '- web_search: Search the web. params: {query: string}\n'
+        '- set_alarm: Set an alarm. params: {hour: int, minute: int, label?: string}\n'
+        '- set_timer: Start a countdown timer. params: {seconds: int}\n'
+        '- toggle_wifi: Toggle WiFi on/off. params: {setting: "wifi", value: bool}\n'
+        '- toggle_bluetooth: Toggle Bluetooth. params: {setting: "bluetooth", value: bool}\n'
+        '- toggle_flashlight: Toggle flashlight. params: {setting: "flashlight", value: bool}\n'
+        '- toggle_dnd: Toggle Do Not Disturb. params: {setting: "dnd", value: bool}\n'
+        '- set_volume: Set volume level. params: {stream: "media"|"alarm"|"ring", level: int 0-100}\n'
+        '- set_brightness: Set screen brightness. params: {level: int 0-100}\n'
+        '- scroll_down / scroll_up: Scroll screen. params: {distance: float 0-1}\n'
+        '- go_back: Go to previous screen. params: {}\n'
+        '- click_screen_text: Tap text on screen. params: {text: string}\n'
+        '- take_screenshot: Capture screen. params: {}\n'
+        '- read_screen: Read screen text. params: {}\n'
+        '- copy_to_clipboard: Copy text. params: {text: string}\n'
+        '- send_sms: Send text message. params: {recipient: string, message: string}\n'
+        '- send_email: Send email. params: {to: string, subject: string, body: string}\n'
+        '- create_note: Create a note. params: {title: string, content: string}\n\n'
+        'Natural language examples:\n'
+        '- "wake me up at 7am" -> set_alarm {hour:7, minute:0}\n'
+        '- "set a 5 minute timer" -> set_timer {seconds:300}\n'
+        '- "volume up to 80 percent" -> set_volume {stream:"media", level:80}\n'
+        '- "brightness half" -> set_brightness {level:50}\n'
+        '- "turn on wifi" -> toggle_wifi {setting:"wifi", value:true}\n'
+        '- "turn off bluetooth" -> toggle_bluetooth {setting:"bluetooth", value:false}\n'
+        '- "flashlight on" -> toggle_flashlight {setting:"flashlight", value:true}\n'
+        '- "dnd mode" -> toggle_dnd {setting:"dnd", value:true}\n\n'
         'User said: "$text"\n\n'
-        'Return ONLY a JSON object with fields: actionId, params (object of parameters). '
-        'Use the action IDs listed above. For launch_app, set params.packageName to the app name. '
-        'For web_search, set params.query. For click_screen_text, set params.text.',
+        'Return ONLY a JSON object with fields: actionId, params (object of parameters).',
       );
 
       final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(analysis);
@@ -311,6 +336,209 @@ class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnviro
         _lastError = null;
       });
     }
+  }
+
+  void _toggleButlerMode() {
+    HapticFeedbackService.selection();
+    setState(() {
+      _butlerMode = !_butlerMode;
+      _statusMessage = _butlerMode ? 'Butler mode active' : 'Standard mode';
+    });
+  }
+
+  Future<void> _quickSetAlarm() async {
+    HapticFeedbackService.tap();
+    final alarm = ActionRegistry.byId('set_alarm');
+    if (alarm == null) return;
+    final result = await _showTimePickerDialog('SET ALARM', alarm);
+    if (result != null) {
+      await _executeAction(alarm.copyWith(
+        params: result,
+        confirmationMessage: 'Set alarm for ${result['hour']}:${result['minute'].toString().padLeft(2, '0')}?',
+      ));
+    }
+  }
+
+  Future<void> _quickSetTimer() async {
+    HapticFeedbackService.tap();
+    final timer = ActionRegistry.byId('set_timer');
+    if (timer == null) return;
+    final result = await _showDurationPickerDialog('SET TIMER', timer);
+    if (result != null) {
+      await _executeAction(timer.copyWith(
+        params: result,
+        confirmationMessage: 'Start timer for ${result['seconds']} seconds?',
+      ));
+    }
+  }
+
+  Future<void> _quickSetVolume() async {
+    HapticFeedbackService.tap();
+    final vol = ActionRegistry.byId('set_volume');
+    if (vol == null) return;
+    final result = await _showSliderDialog('SET VOLUME', vol, 'level', 0, 100, 50);
+    if (result != null) {
+      await _executeAction(vol.copyWith(
+        params: {'stream': 'media', 'level': result},
+        confirmationMessage: 'Set volume to $result%?',
+      ));
+    }
+  }
+
+  Future<void> _quickSetBrightness() async {
+    HapticFeedbackService.tap();
+    final bri = ActionRegistry.byId('set_brightness');
+    if (bri == null) return;
+    final result = await _showSliderDialog('SET BRIGHTNESS', bri, 'level', 0, 100, 50);
+    if (result != null) {
+      await _executeAction(bri.copyWith(
+        params: {'level': result},
+        confirmationMessage: 'Set brightness to $result%?',
+      ));
+    }
+  }
+
+  Future<void> _quickToggleWifi() async {
+    HapticFeedbackService.tap();
+    final wifi = ActionRegistry.byId('toggle_wifi');
+    if (wifi == null) return;
+    await _executeAction(wifi.copyWith(
+      params: {'setting': 'wifi', 'value': true},
+      confirmationMessage: 'Toggle WiFi?',
+    ));
+  }
+
+  Future<void> _quickToggleFlashlight() async {
+    HapticFeedbackService.tap();
+    final flash = ActionRegistry.byId('toggle_flashlight');
+    if (flash == null) return;
+    await _executeAction(flash.copyWith(
+      params: {'setting': 'flashlight', 'value': true},
+      confirmationMessage: 'Toggle flashlight?',
+    ));
+  }
+
+  Future<Map<String, dynamic>?> _showTimePickerDialog(
+      String title, DeviceAction action) async {
+    var hour = 7;
+    var minute = 0;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: hour,
+                          decoration: const InputDecoration(labelText: 'Hour'),
+                          items: List.generate(24, (i) => DropdownMenuItem(value: i, child: Text(i.toString().padLeft(2, '0')))),
+                          onChanged: (v) => setDialogState(() => hour = v ?? 7),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: minute,
+                          decoration: const InputDecoration(labelText: 'Minute'),
+                          items: List.generate(60, (i) => DropdownMenuItem(value: i, child: Text(i.toString().padLeft(2, '0')))),
+                          onChanged: (v) => setDialogState(() => minute = v ?? 0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('SET')),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result != true) return null;
+    return {'hour': hour, 'minute': minute, 'label': ''};
+  }
+
+  Future<Map<String, dynamic>?> _showDurationPickerDialog(
+      String title, DeviceAction action) async {
+    var minutes = 5;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    initialValue: minutes,
+                    decoration: const InputDecoration(labelText: 'Minutes'),
+                    items: [1, 2, 3, 5, 10, 15, 20, 30, 45, 60].map((i) =>
+                        DropdownMenuItem(value: i, child: Text('$i min'))).toList(),
+                    onChanged: (v) => setDialogState(() => minutes = v ?? 5),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('SET')),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result != true) return null;
+    return {'seconds': minutes * 60};
+  }
+
+  Future<int?> _showSliderDialog(
+      String title, DeviceAction action, String param, int min, int max, int defaultVal) async {
+    var value = defaultVal.toDouble();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${value.round()}%', style: AppTypography.headlineSmall(
+                    Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white,
+                  )),
+                  Slider(
+                    value: value,
+                    min: min.toDouble(),
+                    max: max.toDouble(),
+                    divisions: max - min,
+                    onChanged: (v) => setDialogState(() => value = v),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('SET')),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result != true) return null;
+    return value.round();
   }
 
   void _openAccessibilitySetup() {
@@ -560,6 +788,8 @@ class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnviro
         onBack: () => Navigator.pop(context),
         textPrimary: c.textPrimary,
         isDark: c.isDark,
+        butlerMode: _butlerMode,
+        onToggleButler: _toggleButlerMode,
       ),
       body: Column(
         children: [
@@ -651,6 +881,12 @@ class _AgentDrivenEnvironmentScreenState extends ConsumerState<AgentDrivenEnviro
                 setState(() => _statusMessage = 'Stopped');
               }
             },
+            onSetAlarm: _quickSetAlarm,
+            onSetTimer: _quickSetTimer,
+            onSetVolume: _quickSetVolume,
+            onSetBrightness: _quickSetBrightness,
+            onToggleWifi: _quickToggleWifi,
+            onToggleFlashlight: _quickToggleFlashlight,
           ),
 
           Divider(color: c.borderColor, thickness: 1, height: 1),

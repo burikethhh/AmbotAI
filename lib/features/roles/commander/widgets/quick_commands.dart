@@ -16,6 +16,12 @@ class QuickCommands extends StatelessWidget {
   final VoidCallback onEmergencyStop;
   final VoidCallback onAiAnalyze;
   final VoidCallback onGoBack;
+  final VoidCallback onSetAlarm;
+  final VoidCallback onSetTimer;
+  final VoidCallback onSetVolume;
+  final VoidCallback onSetBrightness;
+  final VoidCallback onToggleWifi;
+  final VoidCallback onToggleFlashlight;
 
   const QuickCommands({
     super.key,
@@ -28,79 +34,73 @@ class QuickCommands extends StatelessWidget {
     required this.onEmergencyStop,
     required this.onAiAnalyze,
     required this.onGoBack,
+    this.onSetAlarm = _noop,
+    this.onSetTimer = _noop,
+    this.onSetVolume = _noop,
+    this.onSetBrightness = _noop,
+    this.onToggleWifi = _noop,
+    this.onToggleFlashlight = _noop,
   });
+
+  static void _noop() {}
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final chipWidth = (isNarrow ? 0.45 : 0.22) * screenWidth;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Container(
       padding: const EdgeInsets.all(12),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final chipWidth = isNarrow ? 0.45 : 0.22;
-          return Wrap(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: captureReady
-                      ? Icons.videocam_off
-                      : Icons.videocam_outlined,
-                  label: captureReady ? 'Stop Capture' : 'Start Capture',
-                  isDark: isDark,
-                  onTap: onToggleCapture,
-                ),
-              ),
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: Icons.read_more,
-                  label: 'Read Screen',
-                  isDark: isDark,
-                  onTap: onReadScreen,
-                ),
-              ),
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: Icons.apps,
-                  label: 'Quick Launch',
-                  isDark: isDark,
-                  onTap: onQuickLaunch,
-                ),
-              ),
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: Icons.auto_awesome,
-                  label: 'AI Analyze',
-                  isDark: isDark,
-                  onTap: onAiAnalyze,
-                ),
-              ),
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: Icons.arrow_back,
-                  label: 'Go Back',
-                  isDark: isDark,
-                  onTap: onGoBack,
-                ),
-              ),
-              SizedBox(
-                width: constraints.maxWidth * chipWidth,
-                child: QuickChip(
-                  icon: Icons.emergency,
-                  label: 'Emergency Stop',
-                  isDark: isDark,
-                  danger: true,
-                  onTap: onEmergencyStop,
-                ),
-              ),
+              _chip(chipWidth, captureReady ? Icons.videocam_off : Icons.videocam_outlined,
+                  captureReady ? 'Stop Capture' : 'Start Capture', onToggleCapture),
+              _chip(chipWidth, Icons.read_more, 'Read Screen', onReadScreen),
+              _chip(chipWidth, Icons.apps, 'Quick Launch', onQuickLaunch),
+              _chip(chipWidth, Icons.auto_awesome, 'AI Analyze', onAiAnalyze),
+              _chip(chipWidth, Icons.arrow_back, 'Go Back', onGoBack),
+              _chip(chipWidth, Icons.emergency, 'Emergency Stop', onEmergencyStop, danger: true),
             ],
-          );
-        },
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'BUTLER ACTIONS',
+            style: AppTypography.labelSmall(textSecondary),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _chip(chipWidth, Icons.alarm, 'Set Alarm', onSetAlarm),
+              _chip(chipWidth, Icons.timer, 'Set Timer', onSetTimer),
+              _chip(chipWidth, Icons.volume_up, 'Set Volume', onSetVolume),
+              _chip(chipWidth, Icons.brightness_6, 'Set Brightness', onSetBrightness),
+              _chip(chipWidth, Icons.wifi, 'Toggle WiFi', onToggleWifi),
+              _chip(chipWidth, Icons.flashlight_on, 'Toggle Flashlight', onToggleFlashlight),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(double width, IconData icon, String label, VoidCallback onTap,
+      {bool danger = false}) {
+    return SizedBox(
+      width: width,
+      child: QuickChip(
+        icon: icon,
+        label: label,
+        isDark: isDark,
+        onTap: onTap,
+        danger: danger,
       ),
     );
   }
