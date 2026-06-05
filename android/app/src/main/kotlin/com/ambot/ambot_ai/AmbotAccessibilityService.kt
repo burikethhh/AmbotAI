@@ -28,6 +28,9 @@ import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.UserHandle
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.app.NotificationManager
 
 /**
  * Accessibility Service that enables Ambot AI to:
@@ -362,12 +365,23 @@ class AmbotAccessibilityService : AccessibilityService() {
     }
 
     private fun toggleFlashlight(on: Boolean, result: MethodChannel.Result) {
-        // Flashlight toggle requires camera access; fallback to quick settings
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            result.error("UNSUPPORTED", "Flashlight requires Android 6.0+", null)
+            return
+        }
         try {
-            val intent = Intent(Settings.ACTION_SETTINGS)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            applicationContext.startActivity(intent)
-            result.success("Settings opened (toggle flashlight manually)")
+            val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+            if (cameraId != null) {
+                cameraManager.setTorchMode(cameraId, on)
+                result.success("Flashlight ${if (on) "on" else "off"}")
+            } else {
+                result.error("NO_FLASH", "No flash available on this device", null)
+            }
+        } catch (e: SecurityException) {
+            result.error("CAMERA_PERMISSION", "Camera permission required to toggle flashlight", null)
         } catch (e: Exception) {
             result.error("FLASHLIGHT_FAILED", e.message, null)
         }
@@ -375,10 +389,18 @@ class AmbotAccessibilityService : AccessibilityService() {
 
     private fun toggleDnd(on: Boolean, result: MethodChannel.Result) {
         try {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            applicationContext.startActivity(intent)
-            result.success("DND settings opened (toggle manually)")
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (notificationManager.isNotificationPolicyAccessGranted) {
+                val filter = if (on) NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                    else NotificationManager.INTERRUPTION_FILTER_ALL
+                notificationManager.setInterruptionFilter(filter)
+                result.success("DND ${if (on) "enabled" else "disabled"}")
+            } else {
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                applicationContext.startActivity(intent)
+                result.success("DND permission screen opened (grant to toggle)")
+            }
         } catch (e: Exception) {
             result.error("DND_FAILED", e.message, null)
         }

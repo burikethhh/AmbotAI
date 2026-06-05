@@ -12,6 +12,7 @@ class OpenAIEngine implements AIEngine {
   final String model;
   final String _label;
   final Map<String, String> _extraHeaders;
+  final int maxTokens;
   bool _isReady = false;
   late final http.Client _client;
 
@@ -19,6 +20,7 @@ class OpenAIEngine implements AIEngine {
     required this.apiKey,
     this.baseUrl = 'https://api.openai.com/v1/chat/completions',
     this.model = 'gpt-4o-mini',
+    this.maxTokens = 2048,
     String? label,
     Map<String, String>? extraHeaders,
   })  : _label = label ?? 'OpenAI ($model)',
@@ -192,7 +194,7 @@ class OpenAIEngine implements AIEngine {
       'model': model,
       'messages': messages,
       'temperature': 0.7,
-      'max_tokens': 2048,
+      'max_tokens': maxTokens,
       'stream': stream,
     };
   }

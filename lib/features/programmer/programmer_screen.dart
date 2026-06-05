@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/engine_providers.dart';
 import '../../core/ai/ai_engine.dart';
+import '../../core/ai/engines/openai_engine.dart';
+import '../../core/config/api_keys.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
@@ -11,19 +14,36 @@ import 'widgets/chat_panel.dart';
 import 'widgets/code_editor_panel.dart';
 import 'widgets/preview_panel.dart';
 
-const String defaultHtmlTemplate = '''<!DOCTYPE html>
-<html>
+const String defaultHtml = '''<!DOCTYPE html>
+<html lang="en">
 <head>
-  <style>
-    body { font-family: system-ui, sans-serif; padding: 20px; background: #f5f5f5; }
-    h1 { color: #333; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Project</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Hello, World!</h1>
   <p>Start editing or ask the AI to teach you something!</p>
+  <script src="script.js"></script>
 </body>
 </html>''';
+
+const String defaultCss = '''body {
+  font-family: system-ui, sans-serif;
+  padding: 20px;
+  background: #f5f5f5;
+  color: #333;
+}
+h1 { color: #2c3e50; }''';
+
+const String defaultJs = '''console.log("Hello from Ambot AI!");''';
+
+final List<ProjectFile> defaultProject = [
+  const ProjectFile(filename: 'index.html', content: defaultHtml, language: 'html'),
+  const ProjectFile(filename: 'style.css', content: defaultCss, language: 'css'),
+  const ProjectFile(filename: 'script.js', content: defaultJs, language: 'javascript'),
+];
 
 class ProgrammerScreen extends ConsumerStatefulWidget {
   const ProgrammerScreen({super.key});
@@ -34,26 +54,29 @@ class ProgrammerScreen extends ConsumerStatefulWidget {
 
 class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   int _currentTab = 0;
-  String _htmlCode = defaultHtmlTemplate;
+  int _selectedFileIndex = 0;
+  final List<ProjectFile> _projectFiles = List.from(defaultProject);
   final List<ChatMessage> _messages = [];
   bool _isAiResponding = false;
   int _previewKey = 0;
-  bool _isEngineReady = false;
   bool _engineCheckDone = false;
   final _chatTextController = TextEditingController();
   final _chatScrollController = ScrollController();
   late final TextEditingController _codeController;
+  late AIEngine _programmerEngine;
+  bool _programmerEngineReady = false;
 
   @override
   void initState() {
     super.initState();
-    _codeController = TextEditingController(text: _htmlCode);
-    _checkEngine();
+    _codeController = TextEditingController(text: _currentFileContent);
+    _initProgrammerEngine();
     _messages.add(ChatMessage(
       role: 'ai',
       content:
           'Welcome to the Programmer! I can teach you HTML, CSS, and JavaScript. '
-          'Try asking me to explain a concept or generate code for you.',
+          'This IDE supports separate .html, .css, and .js files. '
+          'Try asking me to create a project for you!',
     ));
   }
 
@@ -62,18 +85,61 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     _chatTextController.dispose();
     _chatScrollController.dispose();
     _codeController.dispose();
+    _programmerEngine.dispose();
     super.dispose();
   }
 
-  void _checkEngine() {
-    final engine = ref.read(aiEngineProvider);
-    final isMock = engine.engineName == 'MockAI' || engine is MockAIEngine;
-    if (mounted) {
-      setState(() {
-        _isEngineReady = !isMock;
-        _engineCheckDone = true;
-      });
+  String get _currentFileContent {
+    if (_selectedFileIndex < _projectFiles.length) {
+      return _projectFiles[_selectedFileIndex].content;
     }
+    return '';
+  }
+
+  void _onCodeChanged(String value) {
+    if (_selectedFileIndex < _projectFiles.length) {
+      final old = _projectFiles[_selectedFileIndex];
+      _projectFiles[_selectedFileIndex] = old.copyWith(content: value);
+    }
+  }
+
+  Future<void> _initProgrammerEngine() async {
+    final nvidiaKey = ApiKeys.nvidiaKey1.isNotEmpty
+        ? ApiKeys.nvidiaKey1
+        : (ApiKeys.nvidiaKey2.isNotEmpty ? ApiKeys.nvidiaKey2 : null);
+
+    if (nvidiaKey != null) {
+      _programmerEngine = OpenAIEngine(
+        apiKey: nvidiaKey,
+        baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
+        model: 'meta/llama-3.3-70b-instruct',
+        maxTokens: 4096,
+        label: 'NVIDIA (meta/llama-3.3-70b-instruct)',
+      );
+      await _programmerEngine.initialize();
+      if (mounted) {
+        setState(() {
+          _programmerEngineReady = true;
+          _engineCheckDone = true;
+        });
+      }
+    } else {
+      final engine = ref.read(aiEngineProvider);
+      final isMock = engine.engineName == 'MockAI' || engine is MockAIEngine;
+      _programmerEngine = engine;
+      if (mounted) {
+        setState(() {
+          _programmerEngineReady = !isMock;
+          _engineCheckDone = true;
+        });
+      }
+    }
+  }
+
+  void _selectFile(int index) {
+    if (index == _selectedFileIndex) return;
+    _codeController.text = _projectFiles[index].content;
+    setState(() => _selectedFileIndex = index);
   }
 
   void _runCode() {
@@ -84,6 +150,46 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   void _switchToCode() {
     FocusScope.of(context).unfocus();
     setState(() => _currentTab = 1);
+  }
+
+  String _assemblePreviewHtml() {
+    String html = '';
+    String css = '';
+    String js = '';
+
+    for (final file in _projectFiles) {
+      final name = file.filename.toLowerCase();
+      if (name.endsWith('.html')) {
+        html = file.content;
+      } else if (name.endsWith('.css')) {
+        css = file.content;
+      } else if (name.endsWith('.js')) {
+        js = file.content;
+      }
+    }
+
+    if (html.isEmpty) {
+      html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body></body></html>';
+    }
+
+    if (css.isNotEmpty && html.contains('</head>')) {
+      final styleTag = '<style>\n$css\n</style>\n';
+      html = html.replaceFirst('</head>', '$styleTag</head>');
+    } else if (css.isNotEmpty) {
+      html = html.replaceFirst('<head>', '<head>\n<style>\n$css\n</style>\n');
+    }
+
+    if (js.isNotEmpty && html.contains('</body>')) {
+      final scriptTag = '<script>\n$js\n</script>\n';
+      html = html.replaceFirst('</body>', '$scriptTag</body>');
+    } else if (js.isNotEmpty) {
+      html = '$html\n<script>\n$js\n</script>';
+    }
+
+    html = html.replaceAll('href="style.css"', '');
+    html = html.replaceAll('src="script.js"', '');
+
+    return html;
   }
 
   Future<void> _sendToAi(String message) async {
@@ -103,18 +209,32 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     _chatTextController.clear();
 
     try {
-      final engine = ref.read(aiEngineProvider);
       final buffer = StringBuffer();
 
-      const systemPrompt =
-          'You are an expert HTML/CSS/JS tutor teaching an absolute beginner. '
-          'Teach web development fundamentals through interactive examples. '
-          'Always provide COMPLETE, RUNNABLE HTML code between ```html and ``` markers. '
-          'Explain concepts simply with analogies. '
-          'After providing code, encourage the student to modify and experiment. '
-          'Keep examples small and focused on one concept at a time. '
-          'Never use external CSS/JS files or CDN links. '
-          'Everything must be self-contained in one HTML file.';
+      final currentFiles = _projectFiles.map((f) =>
+          '// file: ${f.filename}\n${f.content}').join('\n\n');
+
+      final systemPrompt =
+          'You are an expert web developer and tutor. You teach HTML, CSS, and JavaScript by building projects.\n\n'
+          'IMPORTANT: Always output SEPARATE files using this format:\n'
+          '```html\n'
+          '// file: index.html\n'
+          '<!DOCTYPE html>...\n'
+          '```\n'
+          '```css\n'
+          '// file: style.css\n'
+          'body { ... }\n'
+          '```\n'
+          '```javascript\n'
+          '// file: script.js\n'
+          'console.log(...);\n'
+          '```\n\n'
+          'The current project has these files:\n'
+          '$currentFiles\n\n'
+          'When suggesting changes, output the COMPLETE updated files with the // file: marker.\n'
+          'Use modern CSS (flexbox, grid, custom properties) and clean JavaScript (ES6+).\n'
+          'Explain concepts simply with analogies for beginners.\n'
+          'Keep examples focused on one concept at a time.';
 
       final history = _messages
           .where((m) => m.role == 'user' || (m.role == 'ai' && !m.isStreaming))
@@ -123,7 +243,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
               content: m.content))
           .toList();
 
-      await for (final chunk in engine.generateStream(
+      await for (final chunk in _programmerEngine.generateStream(
           message, systemPrompt: systemPrompt, history: history)) {
         buffer.write(chunk);
         if (mounted) {
@@ -143,7 +263,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         _isAiResponding = false;
       });
 
-      _extractAndInsertCode(fullResponse);
+      _extractAndInsertFiles(fullResponse);
     } catch (e) {
       if (!mounted) return;
       final errMsg = e.toString();
@@ -160,6 +280,106 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     }
   }
 
+  void _extractAndInsertFiles(String response) {
+    final fileRegex = RegExp(
+      r'```(\w+)\s*\n(?://|/\*|#)\s*file:\s*(\S+)\s*(?:\*/)?\n([\s\S]*?)```',
+      caseSensitive: false,
+    );
+    final matches = fileRegex.allMatches(response);
+
+    if (matches.isEmpty) {
+      final fallbackRegex = RegExp(r'```(\w+)\s*\n([\s\S]*?)```');
+      final fallbackMatches = fallbackRegex.allMatches(response);
+      if (fallbackMatches.isNotEmpty) {
+        final code = fallbackMatches.first.group(2)?.trim();
+        if (code != null && code.isNotEmpty) {
+          final htmlIdx = _projectFiles.indexWhere(
+              (f) => f.filename.endsWith('.html'));
+          if (htmlIdx != -1) {
+            _projectFiles[htmlIdx] = _projectFiles[htmlIdx].copyWith(content: code);
+            if (_selectedFileIndex == htmlIdx) {
+              _codeController.text = code;
+            }
+            _previewKey++;
+          }
+        }
+      }
+      return;
+    }
+
+    bool changed = false;
+    for (final match in matches) {
+      final lang = match.group(1)!.toLowerCase();
+      final rawFilename = match.group(2)!.trim();
+      final code = match.group(3)!.trim();
+
+      final filename = rawFilename.contains('.')
+          ? rawFilename
+          : _filenameFromLanguage(lang);
+
+      final ext = filename.contains('.')
+          ? filename.substring(filename.lastIndexOf('.'))
+          : '.html';
+
+      final existingIdx = _projectFiles.indexWhere(
+          (f) => f.filename == filename || f.filename.endsWith(ext));
+
+      if (existingIdx != -1) {
+        _projectFiles[existingIdx] = _projectFiles[existingIdx].copyWith(
+          content: code,
+          language: _langFromExt(ext),
+        );
+        if (_selectedFileIndex == existingIdx) {
+          _codeController.text = code;
+        }
+      } else {
+        _projectFiles.add(ProjectFile(
+          filename: filename,
+          content: code,
+          language: _langFromExt(ext),
+        ));
+      }
+      changed = true;
+    }
+
+    if (changed && mounted) {
+      setState(() {});
+      _previewKey++;
+      _switchToCode();
+    }
+  }
+
+  String _filenameFromLanguage(String lang) {
+    switch (lang) {
+      case 'html': return 'index.html';
+      case 'css': return 'style.css';
+      case 'javascript':
+      case 'js': return 'script.js';
+      default: return 'index.html';
+    }
+  }
+
+  String _langFromExt(String ext) {
+    switch (ext) {
+      case '.html': return 'html';
+      case '.css': return 'css';
+      case '.js': return 'javascript';
+      default: return 'html';
+    }
+  }
+
+  void _insertCode(String code) {
+    final htmlIdx = _projectFiles.indexWhere((f) => f.filename.endsWith('.html'));
+    if (htmlIdx != -1) {
+      _projectFiles[htmlIdx] = _projectFiles[htmlIdx].copyWith(content: code);
+      if (_selectedFileIndex == htmlIdx) {
+        _codeController.text = code;
+      }
+      _previewKey++;
+      _switchToCode();
+    }
+  }
+
   void _scrollChatToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_chatScrollController.hasClients) {
@@ -172,24 +392,47 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     });
   }
 
-  void _extractAndInsertCode(String response) {
-    final regex = RegExp(r'```(?:html|css|javascript|js)?\s*\n([\s\S]*?)```');
-    final matches = regex.allMatches(response);
-    if (matches.isNotEmpty) {
-      final code = matches.first.group(1)?.trim();
-      if (code != null && code.isNotEmpty) {
-        _htmlCode = code;
-        _codeController.text = code;
-        _previewKey++;
-      }
-    }
+  void _deleteCurrentFile() {
+    if (_projectFiles.length <= 1) return;
+    _projectFiles.removeAt(_selectedFileIndex);
+    final newIdx = _selectedFileIndex.clamp(0, _projectFiles.length - 1);
+    _selectFile(newIdx);
+    setState(() {});
   }
 
-  void _insertCode(String code) {
-    _htmlCode = code;
-    _codeController.text = code;
-    _previewKey++;
-    _switchToCode();
+  void _showAddFileDialog() {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('NEW FILE'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            hintText: 'filename.html / filename.css / filename.js',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty && name.contains('.')) {
+                final ext = name.substring(name.lastIndexOf('.'));
+                final lang = _langFromExt(ext);
+                _projectFiles.add(ProjectFile(filename: name, content: '', language: lang));
+                _selectFile(_projectFiles.length - 1);
+                setState(() {});
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('ADD'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -218,6 +461,11 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
+        IconButton(
+          icon: Icon(Icons.add, color: c.textPrimary, size: 20),
+          tooltip: 'New file',
+          onPressed: _showAddFileDialog,
+        ),
         TextButton.icon(
           onPressed: _runCode,
           icon: Icon(Icons.play_arrow, color: AppColors.success),
@@ -270,7 +518,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         return ChatPanel(
           messages: _messages,
           isAiResponding: _isAiResponding,
-          isEngineReady: _engineCheckDone ? _isEngineReady : null,
+          isEngineReady: _engineCheckDone ? _programmerEngineReady : null,
           textController: _chatTextController,
           scrollController: _chatScrollController,
           onSend: _sendToAi,
@@ -280,13 +528,17 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       case 1:
         return CodeEditorPanel(
           controller: _codeController,
-          onChanged: (v) => _htmlCode = v,
+          onChanged: _onCodeChanged,
+          projectFiles: _projectFiles,
+          selectedFileIndex: _selectedFileIndex,
+          onSelectFile: _selectFile,
+          onDeleteFile: _deleteCurrentFile,
           themeColors: c,
         );
       case 2:
         return PreviewPanel(
           key: ValueKey('preview_$_previewKey'),
-          htmlCode: _htmlCode,
+          htmlCode: _assemblePreviewHtml(),
           themeColors: c,
         );
       default:

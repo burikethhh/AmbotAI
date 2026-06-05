@@ -1,5 +1,5 @@
 const GIST_ID = process.env.GIST_ID || 'd9936181f4ec00b1e06b8a2fcb169cdc';
-const APK_URL = 'https://github.com/burikethhh/AmbotAI/releases/download/v1.3.3/Ambot-AI-v1.3.3-release.apk';
+const APK_URL = 'https://github.com/burikethhh/AmbotAI/releases/download/v1.3.4/Ambot-AI-v1.3.4-release.apk';
 const GITHUB_API = 'https://api.github.com';
 
 async function getCounter() {
