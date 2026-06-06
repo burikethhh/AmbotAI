@@ -325,8 +325,8 @@
       <p class="subtitle">Requires Android 8+ (API 26). ARM64 devices with 6+ GB RAM recommended for local AI models.</p>
       <div class="version-card">
         <div class="info">
-          <h4>v1.6.2 <span class="badge">latest</span></h4>
-          <p>Auto key rotation — swaps between 2 NVIDIA keys on rate limit</p>
+          <h4>v1.6.4 <span class="badge">latest</span></h4>
+          <p>SSE streaming fix — multiple chat messages work reliably with key rotation</p>
           <div class="meta">
             <span>~223 MB</span>
             <span>APK</span>
@@ -353,6 +353,17 @@
   <section class="changelog" id="updates">
     <div class="container">
       <h3>Updates</h3>
+
+      <div class="entry">
+        <div class="date">June 6, 2026</div>
+        <h4>v1.6.4 — SSE Streaming Fix &amp; Multi-Message Reliability</h4>
+        <ul>
+          <li>Fixed "Stream has already been listened to" error on 2nd+ chat messages</li>
+          <li>OpenAIEngine now creates fresh HTTP connection per SSE stream — multiple messages work reliably</li>
+          <li>Dual NVIDIA API key auto-rotation on rate limit (429)</li>
+          <li>295 tests passing, 0 analyze errors</li>
+        </ul>
+      </div>
 
       <div class="entry">
         <div class="date">June 6, 2026</div>

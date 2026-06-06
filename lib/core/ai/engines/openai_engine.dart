@@ -16,7 +16,7 @@ class OpenAIEngine implements AIEngine {
   final int maxTokens;
   final NvidiaKeyManager? _keyManager;
   bool _isReady = false;
-  late final http.Client _client;
+  http.Client _client;
   http.StreamedResponse? _currentResponse;
 
   OpenAIEngine({
@@ -168,19 +168,28 @@ class OpenAIEngine implements AIEngine {
 
   Stream<String> _streamWithRetry(String prompt, {String? systemPrompt, List<MessageEntry>? history, bool isRetry = false}) async* {
     final body = _buildRequestBody(prompt, systemPrompt, history: history, stream: true);
+    final headers = _buildHeaders()..['Connection'] = 'close';
 
     final request =
         http.Request('POST', Uri.parse(baseUrl))
-          ..headers.addAll(_buildHeaders())
+          ..headers.addAll(headers)
           ..body = jsonEncode(body);
 
     _currentResponse?.stream.drain();
     _currentResponse = null;
 
-    final streamedResponse =
-        await _client.send(request).timeout(const Duration(seconds: 30));
+    http.StreamedResponse streamedResponse;
+    final client = http.Client();
+    try {
+      streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+    } catch (e) {
+      client.close();
+      rethrow;
+    }
 
     if (streamedResponse.statusCode == 429 && _keyManager != null && !isRetry) {
+      streamedResponse.stream.drain();
+      client.close();
       _keyManager.rotateOnRateLimit();
       yield* _streamWithRetry(prompt, systemPrompt: systemPrompt, history: history, isRetry: true);
       return;
@@ -188,45 +197,49 @@ class OpenAIEngine implements AIEngine {
 
     if (streamedResponse.statusCode != 200) {
       final errorBody = await streamedResponse.stream.bytesToString();
+      client.close();
       throw Exception('API error ${streamedResponse.statusCode}: $errorBody');
     }
 
     _currentResponse = streamedResponse;
 
-    // Parse SSE stream
     final lineStream =
         streamedResponse.stream.transform(utf8.decoder);
     String buffer = '';
 
-    await for (final chunk in lineStream) {
-      buffer += chunk;
+    try {
+      await for (final chunk in lineStream) {
+        buffer += chunk;
 
-      while (buffer.contains('\n')) {
-        final newlineIndex = buffer.indexOf('\n');
-        final line = buffer.substring(0, newlineIndex).trim();
-        buffer = buffer.substring(newlineIndex + 1);
+        while (buffer.contains('\n')) {
+          final newlineIndex = buffer.indexOf('\n');
+          final line = buffer.substring(0, newlineIndex).trim();
+          buffer = buffer.substring(newlineIndex + 1);
 
-        if (line.startsWith('data: ')) {
-          final data = line.substring(6);
-          if (data == '[DONE]') return;
+          if (line.startsWith('data: ')) {
+            final data = line.substring(6);
+            if (data == '[DONE]') return;
 
-          try {
-            final json = jsonDecode(data) as Map<String, dynamic>;
-            final choices = json['choices'] as List?;
-            if (choices != null && choices.isNotEmpty) {
-              final delta = choices[0]['delta'] as Map<String, dynamic>?;
-              final content = delta?['content'] as String?;
-              if (content != null && content.isNotEmpty) {
-                yield content;
+            try {
+              final json = jsonDecode(data) as Map<String, dynamic>;
+              final choices = json['choices'] as List?;
+              if (choices != null && choices.isNotEmpty) {
+                final delta = choices[0]['delta'] as Map<String, dynamic>?;
+                final content = delta?['content'] as String?;
+                if (content != null && content.isNotEmpty) {
+                  yield content;
+                }
               }
+            } catch (_) {
+              // Skip malformed chunks
             }
-          } catch (_) {
-            // Skip malformed chunks
           }
         }
       }
+    } finally {
+      client.close();
+      _currentResponse = null;
     }
-    _currentResponse = null;
   }
 
   Map<String, String> _buildHeaders() {

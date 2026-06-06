@@ -1,7 +1,7 @@
 {
-  "version": "1.6.2",
-  "build": 16,
+  "version": "1.6.4",
+  "build": 19,
   "releaseDate": "2026-06-06",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.6.2 - Dual Key Auto-Rotation\n\n- Main chat engine now auto-rotates between both built-in NVIDIA API keys on 429 rate limit\n- OpenAIEngine uses NvidiaKeyManager — seamless key swap without user interruption\n- No more Cloud AI service error when one key is rate limited"
+  "changelog": "v1.6.4 — SSE Streaming Fix & Multi-Message Reliability\n\n- Fixed \"Stream has already been listened to\" error on 2nd+ chat messages\n- OpenAIEngine now creates fresh HTTP connection per SSE stream — multiple messages work reliably\n- Dual NVIDIA API key auto-rotation on rate limit (429)\n- 295 tests passing, 0 analyze errors"
 }

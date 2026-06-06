@@ -547,7 +547,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
            });
            _scrollToBottom();
          }
-       }
+        }
       if (!mounted) return;
       // Final update
       final parsed = parseResponse(buffer.toString());
