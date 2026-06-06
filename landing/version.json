@@ -1,7 +1,7 @@
 {
-  "version": "1.6.2",
-  "build": 16,
+  "version": "1.6.3",
+  "build": 17,
   "releaseDate": "2026-06-06",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.6.2 - Dual Key Auto-Rotation\n\n- Main chat engine now auto-rotates between both built-in NVIDIA API keys on 429 rate limit\n- OpenAIEngine uses NvidiaKeyManager — seamless key swap without user interruption\n- No more Cloud AI service error when one key is rate limited"
+  "changelog": "v1.6.3 - Stable Models Only + Safety Fix\n\n- Removed DeepSeek V4 Flash, Nemotron 3 Ultra, GLM-5 — timed out / unavailable on NVIDIA API\n- Reverted safety model to working nemotron-content-safety-reasoning-4b with relaxed prompt\n- Vision engine now uses NvidiaKeyManager with both keys for auto-retry on 429\n- Programmer default model changed to Llama 3.3 70B\n- Working models: Nemotron 3 Super, Nemotron Super 49B, Llama 3.3 70B, Llama 3.2 Vision, Llama 3.1 8B, Nemotron 3 Nano, Kimi K2/K2.6"
 }

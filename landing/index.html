@@ -325,8 +325,8 @@
       <p class="subtitle">Requires Android 8+ (API 26). ARM64 devices with 6+ GB RAM recommended for local AI models.</p>
       <div class="version-card">
         <div class="info">
-          <h4>v1.6.2 <span class="badge">latest</span></h4>
-          <p>Auto key rotation — swaps between 2 NVIDIA keys on rate limit</p>
+          <h4>v1.6.3 <span class="badge">latest</span></h4>
+          <p>Removed broken models, safety model reverted, vision engine key rotation</p>
           <div class="meta">
             <span>~223 MB</span>
             <span>APK</span>
@@ -353,6 +353,18 @@
   <section class="changelog" id="updates">
     <div class="container">
       <h3>Updates</h3>
+
+      <div class="entry">
+        <div class="date">June 6, 2026</div>
+        <h4>v1.6.3 — Stable Models Only + Safety Fix</h4>
+        <ul>
+          <li>Removed DeepSeek V4 Flash, Nemotron 3 Ultra, GLM-5 — timed out / unavailable on NVIDIA API</li>
+          <li>Reverted safety model to working nemotron-content-safety-reasoning-4b with relaxed prompt</li>
+          <li>Vision engine now uses NvidiaKeyManager with both keys for auto-retry on 429</li>
+          <li>Programmer default model changed to Llama 3.3 70B (reliable, intelligent)</li>
+          <li>Working models: Nemotron 3 Super, Nemotron Super 49B, Llama 3.3 70B, Llama 3.2 Vision, Llama 3.1 8B, Nemotron 3 Nano, Kimi K2/K2.6</li>
+        </ul>
+      </div>
 
       <div class="entry">
         <div class="date">June 6, 2026</div>

@@ -71,7 +71,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   late AIEngine _programmerEngine;
   bool _programmerEngineReady = false;
   Timer? _saveTimer;
-  NvidiaModel _selectedProgrammerModel = NvidiaModelCatalog.deepseekV4Flash;
+  NvidiaModel _selectedProgrammerModel = NvidiaModelCatalog.llama33_70b;
   bool _showModelSelector = false;
 
   @override
