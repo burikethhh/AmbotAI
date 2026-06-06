@@ -18,7 +18,7 @@ class SafetyVerdict {
 
 /// Nemotron Content Safety guardrail service.
 ///
-/// Calls `nvidia/nemotron-content-safety-reasoning-4b` on the
+/// Calls `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` on the
 /// NVIDIA NIM OpenAI-compatible endpoint to classify whether
 /// a given text is safe or violates content policies.
 ///
@@ -35,7 +35,7 @@ class NemotronSafetyService {
   static const String _baseUrl =
       'https://integrate.api.nvidia.com/v1/chat/completions';
   static const String _model =
-      'nvidia/nemotron-content-safety-reasoning-4b';
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning';
 
   void setApiKeys(String key1, String? key2) {
     _keyManager.setUserKeys(key1, key2);
@@ -55,12 +55,17 @@ class NemotronSafetyService {
         {
           'role': 'user',
           'content':
-              'Analyze the following content for safety violations. '
-              'Respond with JSON: {"safe": true/false, "violated_categories": [], "reason": "..."}\n\n'
+              'You are a relaxed content moderator. Only flag as UNSAFE if the '
+              'content contains: hate speech, explicit threats of violence, '
+              'promotion of self-harm, or illegal activity. Be tolerant of mild '
+              'language, opinions, roleplay, educational topics, jokes, and '
+              'normal conversation. When in doubt, mark safe.\n\n'
+              'Respond with strict JSON only: '
+              '{"safe": true/false, "violated_categories": [], "reason": "..."}\n\n'
               'Content: $text',
         },
       ],
-      'max_tokens': 256,
+      'max_tokens': 512,
       'temperature': 0.01,
     };
 

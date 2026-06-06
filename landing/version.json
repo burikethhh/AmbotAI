@@ -1,7 +1,7 @@
 {
-  "version": "1.6.0",
-  "build": 14,
+  "version": "1.6.1",
+  "build": 15,
   "releaseDate": "2026-06-06",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.6.0 - Responsive Layout & Chat Polish\n\n- Responsive grid layout for home screen: adapts from 1 to 4 columns based on screen width\n- New responsive utilities: getDeviceType(), responsiveGridColumns(), responsivePadding(), responsiveIconSize(), responsiveFontSize()\n- Chat input bar rewritten as StatefulWidget: 5 attachment icons collapsed into single [+] expand button with AttachmentPanel\n- General Chat AI responses now render MarkdownBody instead of plain Text (fixes raw markdown display)\n- Chat bubble widths clamped to 200-700px prevents unreachably wide bubbles on tablets\n- Drawer scrolling fix: menu items wrapped in Expanded > SingleChildScrollView\n- Role card truncation fix: maxLines 2, reduced padding, smaller icons for better fit\n- Nemotron safety check wired into both chat screens for non-blocking content moderation\n- Fixed landing page download URL: corrected asset name to match GitHub release filename"
+  "changelog": "v1.6.1 - Softer Safety Moderation\n\n- Swapped safety model from Content Safety 4B to Nemotron 3 Nano Omni 30B reasoning model\n- Relaxed moderation prompt — only flags hate speech, threats, self-harm, illegal activity\n- Tolerant of mild language, opinions, roleplay, educational topics, jokes"
 }

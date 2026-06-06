@@ -101,12 +101,12 @@ class NvidiaModelCatalog {
   );
 
   static const nemotronSafety = NvidiaModel(
-    id: 'nvidia/nemotron-content-safety-reasoning-4b',
-    name: 'Nemotron Content Safety 4B',
-    description: 'Content safety & dialogue moderation guardrail.',
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+    name: 'Nemotron 3 Nano Omni 30B',
+    description: 'Omni reasoning model. Content moderation & general reasoning.',
     provider: NvidiaModelProvider.nvidia,
-    contextLength: 4096,
-    maxTokens: 256,
+    contextLength: 131072,
+    maxTokens: 4096,
   );
 
   // ── GLM via NVIDIA NIM ────────────────────────────────────────────
