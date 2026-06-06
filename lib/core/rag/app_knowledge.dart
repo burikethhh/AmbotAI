@@ -3,10 +3,18 @@ import 'dart:math' as math;
 class AppKnowledge {
   static List<String> get sections => _sections;
 
+  /// Sections that are always relevant regardless of the query
+  /// (about, creator, inspiration).
+  static List<String> get alwaysIncluded => _alwaysIncluded;
+
   /// Retrieve the most relevant knowledge sections for a user query.
   static List<String> retrieve(String query, {int topK = 3}) {
     final qTokens = _tokenize(query);
-    if (qTokens.isEmpty) return _sections.take(topK).toList();
+    final result = <String>[..._alwaysIncluded];
+    if (qTokens.isEmpty) {
+      result.addAll(_sections.take(topK));
+      return result;
+    }
 
     final scored = <_Scored>[];
     for (final section in _sections) {
@@ -19,7 +27,11 @@ class AppKnowledge {
       if (score > 0) scored.add(_Scored(section, score));
     }
     scored.sort((a, b) => b.score.compareTo(a.score));
-    return scored.take(topK).map((s) => s.text).toList();
+    final matched = scored.take(topK).map((s) => s.text);
+    for (final m in matched) {
+      if (!result.contains(m)) result.add(m);
+    }
+    return result;
   }
 
   /// Build a context block to inject into the system prompt.
@@ -46,15 +58,60 @@ class AppKnowledge {
     return parts.toSet();
   }
 
+  /// Sections always injected regardless of user query
+  /// (core identity: what it is, creator, inspiration).
+  static const _alwaysIncluded = [
+    'Ambot AI is an offline-first artificial intelligence assistant designed for Android mobile devices. '
+        'The name "Ambot" comes from the Cebuano phrase "ambot ay" (I don\'t know) — '
+        'reflecting the app\'s tagline "I don\'t know? Now you will." '
+        'It was originally a note-taking app called "Juri\'s Notebook," built as a gift for the creator\'s then-girlfriend '
+        'Juridel (a nursing student) to help her study on Access Campus where internet was slow. '
+        'After the relationship ended, the creator jokingly said "Ambot ay" when asked for a new name — and it stuck. '
+        'It is now a modular AI super-app where every feature is an AI Role, '
+        'originally focused on education and now expanding into multiple verticals '
+        'including Agriculture, Medicine, Law, Business, and Creative fields. '
+        'The app runs entirely on-device using local AI models — no internet connection or cloud API keys are required for core functionality. '
+        'It is built with Flutter and Dart, using Riverpod for state management, '
+        'and leverages native C++ bindings through llama.cpp for on-device LLM inference. '
+        'The ex-girlfriend inspiration story (nursing student named Juridel, broken relationship, "Ambot ay" naming) '
+        'is a key part of the app\'s origin and the creator often shares it when asked about the backstory.',
+  ];
+
   static const _sections = [
     // === WHAT IS AMBOT AI ===
     'Ambot AI is an offline-first artificial intelligence assistant designed for Android mobile devices. '
-        'It runs entirely on-device using local AI models — no internet connection or cloud API keys are required for core functionality. '
-        'The app is built with Flutter and Riverpod for state management, and uses native C++ bindings through llama.cpp and MediaPipe for on-device inference.',
+        'The name "Ambot" comes from the Cebuano phrase "ambot ay" (I don\'t know) — '
+        'reflecting the app\'s tagline "I don\'t know? Now you will." '
+        'It was originally a note-taking app called "Juri\'s Notebook," built as a gift for the creator\'s then-girlfriend '
+        'Juridel (a nursing student) to help her study on Access Campus where internet was slow. '
+        'After the relationship ended, the creator jokingly said "Ambot ay" when asked for a new name — and it stuck. '
+        'It is now a modular AI super-app where every feature is an AI Role, '
+        'originally focused on education and now expanding into multiple verticals '
+        'including Agriculture, Medicine, Law, Business, and Creative fields. '
+        'The app runs entirely on-device using local AI models — no internet connection or cloud API keys are required for core functionality. '
+        'It is built with Flutter and Dart, using Riverpod for state management, '
+        'and leverages native C++ bindings through llama.cpp for on-device LLM inference.',
 
     // === CREATOR ===
-    'Ambot AI was created by a developer with the username "DEVinci" (also known as "codeitman"). '
-        'The project is an open-source personal assistant platform focused on privacy, offline capabilities, and mobile-first AI interaction.',
+    'Who created this app: Ambot AI was created and developed by Christian Keth Aguacito (also known as "burikethhh" on GitHub, '
+        'and by the aliases "DEVinci" and "codeitman"). '
+        'The project is an open-source personal assistant platform built as a solo developer project '
+        'focused on privacy, offline capabilities, and mobile-first AI interaction. '
+        'The creator is a Filipino developer passionate about making AI accessible to everyone, '
+        'especially students and educators in areas with limited internet connectivity.',
+
+    // === INSPIRATION ===
+    'Inspiration backstory origin story: Ambot AI was originally conceived as a note-taking app called "Juri\'s Notebook," '
+        'a gift for the creator\'s then-girlfriend Juridel (nicknamed "beb" or "Juri"), who was a nursing student. '
+        'It was designed to help her with studies and review sessions on Access Campus, '
+        'where the internet was too slow for cloud-based tools — hence the offline-first approach. '
+        'During development the relationship ended, and when asked what to name the app next, '
+        'the creator jokingly shrugged "Ambot ay" (Cebuano for "I don\'t know") — and the name stuck. '
+        'The tagline "I don\'t know? Now you will." emerged from this origin: '
+        'what started as "I don\'t know" (ambot) became a mission to turn ignorance into understanding. '
+        'What began as a personal gift for one nursing student evolved into an open-source AI platform '
+        'for every student who needs offline learning tools, especially in areas with poor internet connectivity. '
+        'The ex-girlfriend theme is why the app exists — a broken relationship gave birth to an AI.',
 
     // === CORE FEATURES ===
     'Ambot AI has five core features: Chat, Agent Driven Environment, Image Generation, Voice Generation, and Document Generation. '
@@ -82,7 +139,7 @@ class AppKnowledge {
     // === MEMORY SYSTEM ===
     'Ambot AI includes a persistent memory system that allows the AI to remember information across conversations. '
         'Memories can be global, role-scoped, or chat-scoped. '
-        'The memory system uses keyword-based retrieval (not embeddings) to stay lightweight on mobile hardware. '
+        'The memory system uses keyword-based retrieval to stay lightweight on mobile hardware. '
         'Users can enable or disable memory at any time from the settings or the memory screen.',
 
     // === RAG FEATURES ===
@@ -96,7 +153,7 @@ class AppKnowledge {
     // === VOICE GENERATION ===
     'Ambot AI generates speech using Piper TTS models downloaded from HuggingFace. '
         'The app supports multiple English voices with different accents and qualities (low, medium). '
-        'Voice generation runs on-device through Android\'s TextToSpeech engine as a fallback. '
+        'Voice generation runs on-device through Piper TTS with Android\'s TextToSpeech engine as a fallback. '
         'Generated audio files are saved to the ambot_output/voice/ directory and can be played, shared, or deleted.',
 
     // === IMAGE GENERATION ===
@@ -119,9 +176,12 @@ class AppKnowledge {
         'Safety rules prevent the AI from performing potentially dangerous operations.',
 
     // === DESIGN ===
-    'Ambot AI features a minimalist black-and-white monochrome design. '
+    'Ambot AI features a minimalist black-and-white monochrome design with brutalist influences — '
+        'sharp 2px borders, uppercase labels, and a focus on readability. '
         'The interface is designed for mobile-first use with a clean, distraction-free aesthetic. '
-        'The app uses Material Design components with a custom monochrome theme.',
+        'The app uses Material Design components with a custom monochrome theme. '
+        'No emojis are used anywhere in the interface — all icons are SVG-based. '
+        'The typography uses the Inter font family for clean, professional text rendering.',
   ];
 }
 

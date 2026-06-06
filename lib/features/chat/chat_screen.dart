@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +25,7 @@ import '../../core/ai/ai_engine.dart' show MessageEntry;
 import '../../core/ai/engine_selector.dart' show EngineMode;
 import '../../core/ai/model_prompt.dart';
 import '../../core/ai/nvidia_vision.dart';
+import '../../core/ai/nemotron_safety.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/theme_colors.dart';
 import 'chat_utils.dart';
@@ -188,30 +190,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   Future<void> _pickImage() async {
     HapticFeedbackService.tap();
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920);
-    if (picked == null) return;
-    setState(() {
-      _pendingImagePath = picked.path;
-      _pendingFilePath = null;
-      _pendingFileName = null;
-    });
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920);
+      if (picked == null || !mounted) return;
+      setState(() {
+        _pendingImagePath = picked.path;
+        _pendingFilePath = null;
+        _pendingFileName = null;
+      });
+    } catch (e) {
+      debugPrint('CHAT: pick image failed: $e');
+    }
   }
 
   Future<void> _pickFile() async {
     HapticFeedbackService.tap();
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
-    if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
-    if (path == null) return;
-    setState(() {
-      _pendingFilePath = path;
-      _pendingFileName = result.files.single.name;
-      _pendingImagePath = null;
-    });
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final path = result.files.single.path;
+      if (path == null) return;
+      setState(() {
+        _pendingFilePath = path;
+        _pendingFileName = result.files.single.name;
+        _pendingImagePath = null;
+      });
+    } catch (e) {
+      debugPrint('CHAT: pick file failed: $e');
+    }
   }
 
   void _clearPendingAttachment() {
@@ -387,6 +397,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   Future<void> _sendWithImageAttachment(String text) async {
     final path = _pendingImagePath!;
+
+    if (!File(path).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image file not found')),
+      );
+      return;
+    }
     _clearPendingAttachment();
 
     final userMessage = ChatMessage(
@@ -405,15 +422,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     setState(() => _messages = [..._messages, aiMessage]);
     _scrollToBottom();
 
-    final analysis = await _visionService.analyzeImage(path);
-    if (!mounted) return;
-    await _finalizeAttachment(analysis, userMessage, aiMessage);
+    try {
+      final analysis = await _visionService.analyzeImage(path);
+      if (!mounted) return;
+      await _finalizeAttachment(analysis, userMessage, aiMessage);
+    } catch (e) {
+      debugPrint('CHAT: analyze image failed: $e');
+      if (!mounted) return;
+      await _finalizeAttachment('__ERROR__:Vision analysis error: $e', userMessage, aiMessage);
+    }
   }
 
   Future<void> _sendWithFileAttachment(String text) async {
     final path = _pendingFilePath!;
     final name = _pendingFileName ?? path.split('/').last;
-    _clearPendingAttachment();
 
     if (!DocumentReader.canRead(path)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -421,6 +443,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       );
       return;
     }
+    _clearPendingAttachment();
 
     final fileText = await DocumentReader.readText(path);
 
@@ -440,14 +463,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     setState(() => _messages = [..._messages, aiMessage]);
     _scrollToBottom();
 
-    final analysis = await _visionService.analyzeDocument(fileText);
-    if (!mounted) return;
-    await _finalizeAttachment(analysis, userMessage, aiMessage);
+    try {
+      final analysis = await _visionService.analyzeDocument(fileText);
+      if (!mounted) return;
+      await _finalizeAttachment(analysis, userMessage, aiMessage);
+    } catch (e) {
+      debugPrint('CHAT: analyze document failed: $e');
+      if (!mounted) return;
+      await _finalizeAttachment('__ERROR__:Document analysis error: $e', userMessage, aiMessage);
+    }
   }
 
   Future<void> _finalizeAttachment(String analysis, ChatMessage userMessage, ChatMessage aiMessage) async {
     final idx = _messages.indexOf(aiMessage);
     if (idx == -1) return;
+    if (analysis.startsWith('__ERROR__:')) {
+      final errorMsg = analysis.replaceFirst('__ERROR__:', '');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
+      }
+      setState(() {
+        _messages.removeAt(idx);
+        _isStreaming = false;
+      });
+      ref.read(conversationsProvider.notifier).addMessage(widget.role.id, _conversation!.id, _messages.last);
+      return;
+    }
     setState(() {
       _messages[idx] = aiMessage.copyWith(content: analysis, isStreaming: false);
       _isStreaming = false;
@@ -622,6 +663,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (userMsgCount > 0 && userMsgCount % 10 == 0) {
       await _extractConversationSummary(conversation.id);
     }
+
+    // Non-blocking safety check (role chats)
+    _runSafetyCheck(parsed.content);
+  }
+
+  void _runSafetyCheck(String content) {
+    final nvidiaKey = ApiKeys.nvidiaKey1.isNotEmpty ? ApiKeys.nvidiaKey1 : null;
+    if (nvidiaKey == null || content.isEmpty) return;
+    final safety = NemotronSafetyService();
+    safety.setApiKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+    safety.checkContent(content).then((verdict) {
+      safety.dispose();
+      if (!verdict.isSafe && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Content flagged: ${verdict.reason ?? "unsafe"}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }).catchError((_) {});
   }
 
   Future<void> _generateImage(String prompt) async {
@@ -853,9 +915,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         memoryLines,
       );
 
+      final appKnowledge = AppKnowledge.buildContext(prompt);
       final content = await engine.generate(
         docPrompt,
-        systemPrompt: widget.role.systemPrompt,
+        systemPrompt: widget.role.systemPrompt + appKnowledge,
       );
 
       if (!mounted) return;

@@ -5,15 +5,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/ai/ai_engine.dart';
 import '../../core/ai/engine_selector.dart';
 import '../../core/ai/model_prompt.dart';
 import '../../core/ai/nvidia_vision.dart';
+import '../../core/ai/nemotron_safety.dart';
 import '../../core/config/api_keys.dart';
+import '../../core/ai/engines/openai_engine.dart';
+import '../../core/ai/nvidia_models.dart';
 import '../../core/image_gen/cloud_image_gen.dart';
 import '../../core/image_gen/image_template.dart';
 import '../../core/image_gen/local_image_gen.dart';
 import '../../core/image_gen/prompt_enhancer.dart';
 import '../../core/document_gen/document_gen_service.dart';
+import '../../core/rag/app_knowledge.dart';
 import '../../shared/widgets/code_block.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/connectivity.dart';
@@ -52,6 +57,8 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
   bool _isGeneratingImage = false;
 
   final NvidiaVisionService _visionService = NvidiaVisionService();
+  AIEngine? _visionEngine;
+  bool _visionEngineReady = false;
 
   String? _pendingImagePath;
   String? _pendingFilePath;
@@ -84,6 +91,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     });
 
     _initVoice();
+    _initVisionEngine();
   }
 
   @override
@@ -99,6 +107,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     _cloudImageEngine.dispose();
     _imagePromptEnhancer?.dispose();
     _visionService.dispose();
+    _visionEngine?.dispose();
     super.dispose();
   }
 
@@ -112,6 +121,28 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         );
       }
     });
+  }
+
+  void _initVisionEngine() {
+    final nvidiaKey = ApiKeys.nvidiaKey1.isNotEmpty
+        ? ApiKeys.nvidiaKey1
+        : (ApiKeys.nvidiaKey2.isNotEmpty ? ApiKeys.nvidiaKey2 : null);
+    if (nvidiaKey == null) return;
+    final model = NvidiaModelCatalog.llama32Vision;
+    try {
+      final engine = OpenAIEngine.nvidiaNim(
+        apiKey: nvidiaKey,
+        model: model.id,
+        maxTokens: model.maxTokens,
+      );
+      engine.initialize().then((_) {
+        if (mounted) setState(() => _visionEngineReady = true);
+      }).catchError((e) {
+        debugPrint('GENERAL_CHAT: vision engine init failed: $e');
+      });
+    } catch (e) {
+      debugPrint('GENERAL_CHAT: vision engine error: $e');
+    }
   }
 
   void _exportChat() {
@@ -167,26 +198,34 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
   // --- Attachments ---
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920);
-    if (picked == null) return;
-    setState(() {
-      _pendingImagePath = picked.path;
-      _pendingFilePath = null;
-      _pendingFileName = null;
-    });
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920);
+      if (picked == null || !mounted) return;
+      setState(() {
+        _pendingImagePath = picked.path;
+        _pendingFilePath = null;
+        _pendingFileName = null;
+      });
+    } catch (e) {
+      debugPrint('GENERAL_CHAT: pick image failed: $e');
+    }
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
-    if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
-    if (path == null) return;
-    setState(() {
-      _pendingFilePath = path;
-      _pendingFileName = result.files.single.name;
-      _pendingImagePath = null;
-    });
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final path = result.files.single.path;
+      if (path == null) return;
+      setState(() {
+        _pendingFilePath = path;
+        _pendingFileName = result.files.single.name;
+        _pendingImagePath = null;
+      });
+    } catch (e) {
+      debugPrint('GENERAL_CHAT: pick file failed: $e');
+    }
   }
 
   void _clearPendingAttachment() {
@@ -204,7 +243,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
     if ((text.isEmpty && _pendingImagePath == null && _pendingFilePath == null) || _isStreaming) return;
 
-    final engine = ref.read(aiEngineProvider);
+    final engine = _visionEngineReady && _visionEngine != null
+        ? _visionEngine!
+        : ref.read(aiEngineProvider);
     if (!engine.isReady) {
       final downloaded = await showModelRequiredPrompt(context: context, ref: ref, featureName: 'Chat');
       if (!downloaded) return;
@@ -260,6 +301,11 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   Future<void> _sendWithImageAttachment(String text) async {
     final path = _pendingImagePath!;
+
+    if (!File(path).existsSync()) {
+      _addError('Image file not found.');
+      return;
+    }
     _clearPendingAttachment();
 
     final userMessage = _ChatMessage(
@@ -278,15 +324,20 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     setState(() => _messages.add(aiMessage));
     _scrollToBottom();
 
-    final analysis = await _visionService.analyzeImage(path);
-    if (!mounted) return;
-    _finalizeMessage(analysis);
+    try {
+      final analysis = await _visionService.analyzeImage(path);
+      if (!mounted) return;
+      _finalizeMessage(analysis);
+    } catch (e) {
+      debugPrint('GENERAL_CHAT: analyze image failed: $e');
+      if (!mounted) return;
+      _finalizeMessage('__ERROR__:Vision analysis error: $e');
+    }
   }
 
   Future<void> _sendWithFileAttachment(String text) async {
     final path = _pendingFilePath!;
     final name = _pendingFileName ?? path.split('/').last;
-    _clearPendingAttachment();
 
     if (!DocumentReader.canRead(path)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -294,6 +345,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
       );
       return;
     }
+    _clearPendingAttachment();
 
     final fileText = await DocumentReader.readText(path);
 
@@ -312,10 +364,15 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     final aiMessage = _ChatMessage(content: '', isUser: false, isStreaming: true);
     setState(() => _messages.add(aiMessage));
     _scrollToBottom();
-
-    final analysis = await _visionService.analyzeDocument(fileText);
-    if (!mounted) return;
-    _finalizeMessage(analysis);
+    try {
+      final analysis = await _visionService.analyzeDocument(fileText);
+      if (!mounted) return;
+      _finalizeMessage(analysis);
+    } catch (e) {
+      debugPrint('GENERAL_CHAT: analyze document failed: $e');
+      if (!mounted) return;
+      _finalizeMessage('__ERROR__:Document analysis error: $e');
+    }
   }
 
   bool _isImageRequest(String text) {
@@ -332,8 +389,9 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
   void _streamResponse(String text, dynamic engine) {
     final buffer = StringBuffer();
     _aiStreamSub?.cancel();
+    final appKnowledge = AppKnowledge.buildContext(text);
     _aiStreamSub = engine.generateStream(text, systemPrompt:
-        'You are Ambot AI, a general-purpose helpful assistant.').listen(
+        'You are Ambot AI, a general-purpose helpful assistant.$appKnowledge').listen(
       (chunk) {
         buffer.write(chunk);
         if (mounted) {
@@ -372,11 +430,42 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   void _finalizeMessage(String content) {
     if (!mounted) return;
+    if (content.startsWith('__ERROR__:')) {
+      final errorMsg = content.replaceFirst('__ERROR__:', '');
+      setState(() {
+        _messages.removeLast();
+        _isStreaming = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
+      _scrollToBottom();
+      return;
+    }
     setState(() {
       _messages.last = _ChatMessage(content: content, isUser: false, isStreaming: false);
       _isStreaming = false;
     });
     _scrollToBottom();
+
+    // Non-blocking safety check (general chat)
+    _runSafetyCheck(content);
+  }
+
+  void _runSafetyCheck(String content) {
+    final nvidiaKey = ApiKeys.nvidiaKey1.isNotEmpty ? ApiKeys.nvidiaKey1 : null;
+    if (nvidiaKey == null || content.isEmpty) return;
+    final safety = NemotronSafetyService();
+    safety.setApiKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+    safety.checkContent(content).then((verdict) {
+      safety.dispose();
+      if (!verdict.isSafe && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Content flagged: ${verdict.reason ?? "unsafe"}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }).catchError((_) {});
   }
 
   void _addError(String content) {
@@ -572,12 +661,17 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
           ]),
           const SizedBox(height: 8),
         ],
-        if (msg.attachmentPath != null) ...[
+        if (msg.attachmentPath != null && msg.attachmentType == 'image' &&
+            File(msg.attachmentPath!).existsSync()) ...[
+          ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(
+            File(msg.attachmentPath!), width: double.infinity, fit: BoxFit.contain, height: 200)),
+          const SizedBox(height: 8),
+        ] else if (msg.attachmentPath != null) ...[
           Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: c.cardElevated, borderRadius: BorderRadius.circular(4)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(msg.attachmentType == 'image' ? Icons.image : Icons.attach_file, size: 16, color: c.textSecondary),
+              Icon(Icons.attach_file, size: 16, color: c.textSecondary),
               const SizedBox(width: 6),
-              Text(msg.attachmentType == 'image' ? 'Image attached' : 'File attached', style: AppTypography.labelSmall(c.textSecondary)),
+              Text('File attached', style: AppTypography.labelSmall(c.textSecondary)),
             ]),
           ),
           const SizedBox(height: 8),

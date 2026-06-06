@@ -13,16 +13,23 @@ class NvidiaVisionService {
     _keyManager.setUserKeys(key1, key2);
   }
 
-  Future<String> analyzeImage(String imagePath) async {
+  Future<String> analyzeImage(String imagePath, {int retryCount = 0}) async {
     final key = _keyManager.activeKey ?? ApiKeys.nvidiaKey1;
-    if (key.isEmpty) return 'No NVIDIA API key configured.';
+    if (key.isEmpty) return '__ERROR__:No NVIDIA API key configured.';
 
     final file = File(imagePath);
-    if (!await file.exists()) return 'Image file not found.';
+    if (!await file.exists()) return '__ERROR__:Image file not found.';
 
     final bytes = await file.readAsBytes();
     final base64Image = base64Encode(bytes);
-    const ext = 'png';
+    final ext = imagePath.split('.').last.toLowerCase();
+    final mimeExt = switch (ext) {
+      'jpg' || 'jpeg' => 'jpeg',
+      'png' => 'png',
+      'gif' => 'gif',
+      'webp' => 'webp',
+      _ => 'png',
+    };
 
     final body = {
       'model': 'meta/llama-3.2-11b-vision-instruct',
@@ -31,7 +38,7 @@ class NvidiaVisionService {
           'role': 'user',
           'content': [
             {'type': 'text', 'text': 'Describe this image in detail. What do you see?'},
-            {'type': 'image_url', 'image_url': {'url': 'data:image/$ext;base64,$base64Image'}},
+            {'type': 'image_url', 'image_url': {'url': 'data:image/$mimeExt;base64,$base64Image'}},
           ],
         },
       ],
@@ -63,12 +70,13 @@ class NvidiaVisionService {
       }
 
       if (response.statusCode == 429) {
+        if (retryCount >= 1) return '__ERROR__:NVIDIA vision rate-limited. Both API keys exhausted.';
         _keyManager.rotateOnRateLimit();
-        return analyzeImage(imagePath);
+        return analyzeImage(imagePath, retryCount: retryCount + 1);
       }
-      return 'Vision analysis failed (HTTP ${response.statusCode}).';
+      return '__ERROR__:Vision analysis failed (HTTP ${response.statusCode}).';
     } catch (e) {
-      return 'Vision analysis error: $e';
+      return '__ERROR__:Vision analysis error: $e';
     }
   }
 

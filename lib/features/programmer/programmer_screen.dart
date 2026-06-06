@@ -6,6 +6,8 @@ import '../../core/providers/engine_providers.dart';
 import '../../core/ai/ai_engine.dart';
 import '../../core/ai/engines/mock_engine.dart';
 import '../../core/ai/engines/openai_engine.dart';
+import '../../core/ai/nvidia_models.dart';
+import '../../core/rag/app_knowledge.dart';
 import '../../core/config/api_keys.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
@@ -69,6 +71,8 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   late AIEngine _programmerEngine;
   bool _programmerEngineReady = false;
   Timer? _saveTimer;
+  NvidiaModel _selectedProgrammerModel = NvidiaModelCatalog.deepseekV4Flash;
+  bool _showModelSelector = false;
 
   @override
   void initState() {
@@ -134,20 +138,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         : (ApiKeys.nvidiaKey2.isNotEmpty ? ApiKeys.nvidiaKey2 : null);
 
     if (nvidiaKey != null) {
-      _programmerEngine = OpenAIEngine(
-        apiKey: nvidiaKey,
-        baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-        model: 'meta/llama-3.3-70b-instruct',
-        maxTokens: 4096,
-        label: 'NVIDIA (meta/llama-3.3-70b-instruct)',
-      );
-      await _programmerEngine.initialize();
-      if (mounted) {
-        setState(() {
-          _programmerEngineReady = true;
-          _engineCheckDone = true;
-        });
-      }
+      await _tryInitEngine(nvidiaKey, _selectedProgrammerModel);
     } else {
       final engine = ref.read(aiEngineProvider);
       final isMock = engine.engineName == 'MockAI' || engine is MockAIEngine;
@@ -159,6 +150,87 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         });
       }
     }
+  }
+
+  Future<void> _tryInitEngine(String apiKey, NvidiaModel model) async {
+    try {
+      final engine = _buildEngineForModel(apiKey, model);
+      await engine.initialize();
+      _programmerEngine = engine;
+      if (mounted) {
+        setState(() {
+          _programmerEngineReady = true;
+          _engineCheckDone = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('PROGRAMMER: engine init failed for ${model.id}: $e');
+      // Fallback: try the default NVIDIA model
+      await _fallbackToDefaultEngine(apiKey);
+    }
+  }
+
+  Future<void> _fallbackToDefaultEngine(String apiKey) async {
+    try {
+      final engine = OpenAIEngine.nvidiaNim(
+        apiKey: apiKey,
+        model: 'meta/llama-3.3-70b-instruct',
+        maxTokens: 4096,
+      );
+      await engine.initialize();
+      _programmerEngine = engine;
+      if (mounted) {
+        setState(() {
+          _selectedProgrammerModel = NvidiaModelCatalog.llama33_70b;
+          _programmerEngineReady = true;
+          _engineCheckDone = true;
+        });
+      }
+    } catch (e2) {
+      debugPrint('PROGRAMMER: fallback engine also failed: $e2');
+      if (mounted) {
+        setState(() {
+          _programmerEngineReady = false;
+          _engineCheckDone = true;
+        });
+      }
+    }
+  }
+
+  AIEngine _buildEngineForModel(String apiKey, NvidiaModel model) {
+    switch (model.provider) {
+      case NvidiaModelProvider.openRouter:
+        return OpenAIEngine.openRouter(
+          apiKey: apiKey,
+          model: model.id,
+        );
+      case NvidiaModelProvider.nvidia:
+        return OpenAIEngine.nvidiaNim(
+          apiKey: apiKey,
+          model: model.id,
+          maxTokens: model.maxTokens,
+        );
+      case NvidiaModelProvider.qwen:
+        return OpenAIEngine.qwen(
+          apiKey: apiKey,
+          model: model.id,
+        );
+    }
+  }
+
+  void _onProgrammerModelChanged(NvidiaModel model) {
+    final nvidiaKey = ApiKeys.nvidiaKey1.isNotEmpty
+        ? ApiKeys.nvidiaKey1
+        : (ApiKeys.nvidiaKey2.isNotEmpty ? ApiKeys.nvidiaKey2 : null);
+    if (nvidiaKey == null) return;
+
+    setState(() {
+      _selectedProgrammerModel = model;
+      _showModelSelector = false;
+      _engineCheckDone = false;
+    });
+    _programmerEngine.dispose();
+    _tryInitEngine(nvidiaKey, model);
   }
 
   void _selectFile(int index) {
@@ -240,8 +312,9 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       final currentFiles = _projectFiles.map((f) =>
           '// file: ${f.filename}\n${f.content}').join('\n\n');
 
+      final appKnowledge = AppKnowledge.buildContext(message);
       final systemPrompt =
-          'You are an expert web developer and tutor. You teach HTML, CSS, and JavaScript by building projects.\n\n'
+          'You are an expert web developer and tutor. You teach HTML, CSS, and JavaScript by building projects.$appKnowledge\n\n'
           'IMPORTANT: Always output SEPARATE files using this format:\n'
           '```html\n'
           '// file: index.html\n'
@@ -499,6 +572,16 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       ),
       actions: [
         IconButton(
+          icon: Icon(Icons.memory, color: c.textSecondary, size: 20),
+          tooltip: 'Switch model',
+          onPressed: () => _showModelSelector = !_showModelSelector,
+        ),
+        if (_showModelSelector)
+          SizedBox(
+            width: 200,
+            child: _buildModelDropdown(c),
+          ),
+        IconButton(
           icon: Icon(Icons.add, color: c.textPrimary, size: 20),
           tooltip: 'New file',
           onPressed: _showAddFileDialog,
@@ -510,6 +593,38 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         ),
         const SizedBox(width: 8),
       ],
+    );
+  }
+
+  Widget _buildModelDropdown(ThemeColors c) {
+    return Container(
+      height: 36,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: c.borderColor),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedProgrammerModel.id,
+          isExpanded: true,
+          dropdownColor: c.surfaceColor,
+          style: AppTypography.labelSmall(c.textPrimary),
+          items: NvidiaModelCatalog.programmerModels.map((m) {
+            return DropdownMenuItem(
+              value: m.id,
+              child: Text(m.name, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            final model = NvidiaModelCatalog.programmerModels.firstWhere(
+              (m) => m.id == id,
+            );
+            _onProgrammerModelChanged(model);
+          },
+        ),
+      ),
     );
   }
 

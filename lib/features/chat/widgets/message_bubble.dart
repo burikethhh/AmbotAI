@@ -30,6 +30,7 @@ class ChatMessageBubble extends StatelessWidget {
   }
 
   Widget _buildUserMessage(BuildContext context, ThemeColors c) {
+    final hasAttachments = message.attachments != null && message.attachments!.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -37,6 +38,13 @@ class ChatMessageBubble extends StatelessWidget {
           padding: const EdgeInsets.only(right: 4, bottom: 6),
           child: Text('You', style: AppTypography.labelSmall(c.textTertiary)),
         ),
+        if (hasAttachments) ...[
+          for (final a in message.attachments!)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _UserAttachmentPreview(attachment: a),
+            ),
+        ],
         Container(
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.78,
@@ -299,6 +307,57 @@ class _PlanBlockState extends State<_PlanBlock> {
         ],
       ),
     );
+  }
+}
+
+class _UserAttachmentPreview extends StatelessWidget {
+  final MessageAttachment attachment;
+
+  const _UserAttachmentPreview({required this.attachment});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (attachment.type) {
+      case MessageAttachmentType.image:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+            decoration: BoxDecoration(
+              border: Border.all(color: ThemeColors.of(context).borderColor),
+            ),
+            child: Image.file(
+              File(attachment.path),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                height: 80,
+                color: ThemeColors.of(context).cardElevated,
+                child: Icon(Icons.broken_image, color: ThemeColors.of(context).textSecondary, size: 32),
+              ),
+            ),
+          ),
+        );
+      case MessageAttachmentType.document:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: ThemeColors.of(context).cardElevated,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: ThemeColors.of(context).borderColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.attach_file, size: 16, color: ThemeColors.of(context).textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                attachment.caption ?? 'Attached file',
+                style: AppTypography.bodySmall(ThemeColors.of(context).textSecondary),
+              ),
+            ],
+          ),
+        );
+    }
   }
 }
 

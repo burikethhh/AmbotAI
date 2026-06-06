@@ -1,7 +1,7 @@
 name: ambot_ai
 description: "Ambot AI - Your offline AI classroom"
 publish_to: 'none'
-version: 1.4.0+12
+version: 1.5.0+13
 
 environment:
   sdk: ^3.10.7

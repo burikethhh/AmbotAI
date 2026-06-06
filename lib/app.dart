@@ -52,7 +52,7 @@ class _AmbotAppState extends ConsumerState<AmbotApp>
     final isDark = ref.watch(themeProvider);
 
     return MaterialApp.router(
-      title: 'Ambot AI',
+      title: 'Ambot',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

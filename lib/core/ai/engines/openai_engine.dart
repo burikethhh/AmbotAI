@@ -63,12 +63,62 @@ class OpenAIEngine implements AIEngine {
   factory OpenAIEngine.nvidia({
     required String apiKey,
     String model = 'meta/llama-3.1-8b-instruct',
+    int maxTokens = 2048,
   }) {
     return OpenAIEngine(
       apiKey: apiKey,
       baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
       model: model,
+      maxTokens: maxTokens,
       label: 'NVIDIA ($model)',
+    );
+  }
+
+  /// Pre-configured for a specific NVIDIA NIM model.
+  /// Prefer [OpenAIEngine.nvidia] and pass a different [model] for simplicity.
+  factory OpenAIEngine.nvidiaNim({
+    required String apiKey,
+    required String model,
+    int maxTokens = 4096,
+  }) {
+    return OpenAIEngine(
+      apiKey: apiKey,
+      baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
+      model: model,
+      maxTokens: maxTokens,
+      label: 'NVIDIA ($model)',
+    );
+  }
+
+  /// Pre-configured for GLM models via NVIDIA NIM.
+  factory OpenAIEngine.glm({
+    required String apiKey,
+    String model = 'z-ai/glm5',
+  }) {
+    return OpenAIEngine(
+      apiKey: apiKey,
+      baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
+      model: model,
+      maxTokens: 4096,
+      label: 'GLM ($model)',
+    );
+  }
+
+  /// Pre-configured for Kimi models via OpenRouter.
+  factory OpenAIEngine.kimi({
+    required String apiKey,
+    String model = 'moonshotai/kimi-k2',
+  }) {
+    return OpenAIEngine(
+      apiKey: apiKey,
+      baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      model: model,
+      maxTokens: 8192,
+      label: 'Kimi ($model)',
+      extraHeaders: {
+        'HTTP-Referer': 'https://ambot-ai.app',
+        'X-Title': 'Ambot AI',
+      },
     );
   }
 
