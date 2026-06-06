@@ -18,7 +18,7 @@ class SafetyVerdict {
 
 /// Nemotron Content Safety guardrail service.
 ///
-/// Calls `nvidia/nemotron-content-safety-reasoning-4b` on the
+/// Calls `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` on the
 /// NVIDIA NIM OpenAI-compatible endpoint to classify whether
 /// a given text is safe or violates content policies.
 ///
@@ -35,7 +35,7 @@ class NemotronSafetyService {
   static const String _baseUrl =
       'https://integrate.api.nvidia.com/v1/chat/completions';
   static const String _model =
-      'nvidia/nemotron-content-safety-reasoning-4b';
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning';
 
   void setApiKeys(String key1, String? key2) {
     _keyManager.setUserKeys(key1, key2);

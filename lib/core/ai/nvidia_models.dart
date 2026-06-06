@@ -1,4 +1,4 @@
-// Catalog of available AI models for NVIDIA NIM and OpenRouter.
+// Catalog of available NVIDIA NIM and OpenRouter models.
 // Model IDs are compatible with POST /v1/chat/completions
 // on either integrate.api.nvidia.com (NVIDIA) or
 // openrouter.ai/api/v1 (OpenRouter).
@@ -28,6 +28,24 @@ class NvidiaModelCatalog {
 
   // ── NVIDIA NIM (build.nvidia.com) ──────────────────────────────────
 
+  static const deepseekV4Flash = NvidiaModel(
+    id: 'deepseek-ai/deepseek-v4-flash',
+    name: 'DeepSeek V4 Flash',
+    description: '284B MoE (13B active). Fast coding, 1M context.',
+    provider: NvidiaModelProvider.nvidia,
+    contextLength: 1_000_000,
+    maxTokens: 8192,
+  );
+
+  static const nemotron3Ultra = NvidiaModel(
+    id: 'nvidia/nemotron-3-ultra-550b-a55b',
+    name: 'Nemotron 3 Ultra',
+    description: '550B MoE (55B active). Best quality reasoning & coding.',
+    provider: NvidiaModelProvider.nvidia,
+    contextLength: 131072,
+    maxTokens: 8192,
+  );
+
   static const nemotron3Super = NvidiaModel(
     id: 'nvidia/nemotron-3-super-120b-a12b',
     name: 'Nemotron 3 Super',
@@ -49,7 +67,7 @@ class NvidiaModelCatalog {
   static const nemotronSuper49B = NvidiaModel(
     id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
     name: 'Nemotron Super 49B v1.5',
-    description: '49B dense model. Strong general-purpose.',
+    description: '49B dense model, successor to Llama 3.3 Nemotron Super.',
     provider: NvidiaModelProvider.nvidia,
     contextLength: 131072,
     maxTokens: 8192,
@@ -76,19 +94,39 @@ class NvidiaModelCatalog {
   static const llama31_8b = NvidiaModel(
     id: 'meta/llama-3.1-8b-instruct',
     name: 'Llama 3.1 8B',
-    description: 'Reliable 8B model. Fast & works on all tiers.',
+    description: 'State-of-the-art 8B model. Fast & reliable.',
     provider: NvidiaModelProvider.nvidia,
     contextLength: 131072,
     maxTokens: 4096,
   );
 
   static const nemotronSafety = NvidiaModel(
-    id: 'nvidia/nemotron-content-safety-reasoning-4b',
-    name: 'Nemotron Content Safety 4B',
-    description: 'Content safety & dialogue moderation guardrail.',
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+    name: 'Nemotron 3 Nano Omni 30B',
+    description: 'Omni reasoning model. Content moderation & general reasoning.',
     provider: NvidiaModelProvider.nvidia,
-    contextLength: 4096,
-    maxTokens: 256,
+    contextLength: 131072,
+    maxTokens: 4096,
+  );
+
+  // ── GLM via NVIDIA NIM ────────────────────────────────────────────
+
+  static const glm5 = NvidiaModel(
+    id: 'z-ai/glm5',
+    name: 'GLM-5',
+    description: 'Zhipu GLM-5. Strong multilingual chat & reasoning.',
+    provider: NvidiaModelProvider.nvidia,
+    contextLength: 131072,
+    maxTokens: 4096,
+  );
+
+  static const glm51 = NvidiaModel(
+    id: 'z-ai/glm5.1',
+    name: 'GLM-5.1',
+    description: 'GLM-5.1 updated. Strong multilingual & coding.',
+    provider: NvidiaModelProvider.nvidia,
+    contextLength: 131072,
+    maxTokens: 4096,
   );
 
   // ── Kimi via OpenRouter ───────────────────────────────────────────
@@ -113,12 +151,16 @@ class NvidiaModelCatalog {
 
   /// All available models for the Programmer role.
   static const List<NvidiaModel> programmerModels = [
+    deepseekV4Flash,
+    nemotron3Ultra,
     nemotron3Super,
     nemotronSuper49B,
     llama33_70b,
-    nemotron3Nano,
+    glm5,
+    glm51,
     kimiK2,
     kimiK26Free,
+    nemotron3Nano,
   ];
 
   /// Vision-capable models for General Chat.
@@ -126,6 +168,8 @@ class NvidiaModelCatalog {
     llama32Vision,
     llama33_70b,
     nemotron3Super,
+    nemotron3Ultra,
+    deepseekV4Flash,
   ];
 
   /// Content safety models.

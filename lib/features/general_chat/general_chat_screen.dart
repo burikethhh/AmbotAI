@@ -10,12 +10,11 @@ import 'package:markdown/markdown.dart' as md;
 import '../../core/ai/ai_engine.dart';
 import '../../core/ai/engine_selector.dart';
 import '../../core/ai/model_prompt.dart';
-import '../../core/ai/nemotron_safety.dart';
-import '../../core/ai/nvidia_key_manager.dart';
-import '../../core/ai/nvidia_models.dart';
 import '../../core/ai/nvidia_vision.dart';
+import '../../core/ai/nemotron_safety.dart';
 import '../../core/config/api_keys.dart';
 import '../../core/ai/engines/openai_engine.dart';
+import '../../core/ai/nvidia_models.dart';
 import '../../core/image_gen/cloud_image_gen.dart';
 import '../../core/image_gen/image_template.dart';
 import '../../core/image_gen/local_image_gen.dart';
@@ -132,21 +131,17 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         : (ApiKeys.nvidiaKey2.isNotEmpty ? ApiKeys.nvidiaKey2 : null);
     if (nvidiaKey == null) return;
     final model = NvidiaModelCatalog.llama32Vision;
-    final keyManager = NvidiaKeyManager();
-    keyManager.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
     try {
       final engine = OpenAIEngine.nvidiaNim(
         apiKey: nvidiaKey,
         model: model.id,
         maxTokens: model.maxTokens,
-        keyManager: keyManager,
       );
       engine.initialize().then((_) {
         if (mounted) setState(() => _visionEngineReady = true);
       }).catchError((e) {
         debugPrint('GENERAL_CHAT: vision engine init failed: $e');
       });
-      _visionEngine = engine;
     } catch (e) {
       debugPrint('GENERAL_CHAT: vision engine error: $e');
     }
