@@ -7,6 +7,7 @@ import 'engines/mock_engine.dart';
 import 'engines/openai_engine.dart';
 import 'model_manager.dart';
 import 'model_registry.dart';
+import 'nvidia_key_manager.dart';
 import '../config/api_keys.dart';
 
 enum EngineMode { local, cloud, mock }
@@ -130,7 +131,9 @@ class EngineSelector {
   }) async {
     // Try preferred provider first
     if (preferred == CloudProvider.nvidia && nvidiaKey != null) {
-      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey);
+      final keyManager = NvidiaKeyManager();
+      keyManager.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: keyManager);
       await engine.initialize();
       return EngineSelection(
         engine: engine,
@@ -175,7 +178,9 @@ class EngineSelector {
 
     // Fall back to whichever key is available (priority: NVIDIA > OpenRouter > Gemini > Qwen)
     if (nvidiaKey != null) {
-      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey);
+      final keyManager = NvidiaKeyManager();
+      keyManager.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: keyManager);
       await engine.initialize();
       return EngineSelection(
         engine: engine,

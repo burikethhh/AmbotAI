@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../ai_engine.dart';
+import '../nvidia_key_manager.dart';
 
 /// OpenAI-compatible cloud engine.
 /// Works with OpenAI, OpenRouter, NVIDIA, and any API that follows the
@@ -13,6 +14,7 @@ class OpenAIEngine implements AIEngine {
   final String _label;
   final Map<String, String> _extraHeaders;
   final int maxTokens;
+  final NvidiaKeyManager? _keyManager;
   bool _isReady = false;
   late final http.Client _client;
   http.StreamedResponse? _currentResponse;
@@ -24,8 +26,10 @@ class OpenAIEngine implements AIEngine {
     this.maxTokens = 2048,
     String? label,
     Map<String, String>? extraHeaders,
+    NvidiaKeyManager? keyManager,
   })  : _label = label ?? 'OpenAI ($model)',
         _extraHeaders = extraHeaders ?? {},
+        _keyManager = keyManager,
         _client = http.Client();
 
   /// Pre-configured for OpenRouter.
@@ -64,6 +68,7 @@ class OpenAIEngine implements AIEngine {
     required String apiKey,
     String model = 'meta/llama-3.1-8b-instruct',
     int maxTokens = 2048,
+    NvidiaKeyManager? keyManager,
   }) {
     return OpenAIEngine(
       apiKey: apiKey,
@@ -71,6 +76,7 @@ class OpenAIEngine implements AIEngine {
       model: model,
       maxTokens: maxTokens,
       label: 'NVIDIA ($model)',
+      keyManager: keyManager,
     );
   }
 
@@ -80,6 +86,7 @@ class OpenAIEngine implements AIEngine {
     required String apiKey,
     required String model,
     int maxTokens = 4096,
+    NvidiaKeyManager? keyManager,
   }) {
     return OpenAIEngine(
       apiKey: apiKey,
@@ -87,6 +94,7 @@ class OpenAIEngine implements AIEngine {
       model: model,
       maxTokens: maxTokens,
       label: 'NVIDIA ($model)',
+      keyManager: keyManager,
     );
   }
 
@@ -129,12 +137,21 @@ class OpenAIEngine implements AIEngine {
 
   @override
   Future<String> generate(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async {
+    return _generateWithRetry(prompt, systemPrompt: systemPrompt, history: history);
+  }
+
+  Future<String> _generateWithRetry(String prompt, {String? systemPrompt, List<MessageEntry>? history, bool isRetry = false}) async {
     final body = _buildRequestBody(prompt, systemPrompt, history: history, stream: false);
 
     final response = await _client
         .post(Uri.parse(baseUrl),
             headers: _buildHeaders(), body: jsonEncode(body))
         .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode == 429 && _keyManager != null && !isRetry) {
+      _keyManager.rotateOnRateLimit();
+      return _generateWithRetry(prompt, systemPrompt: systemPrompt, history: history, isRetry: true);
+    }
 
     if (response.statusCode != 200) {
       throw Exception('API error ${response.statusCode}: ${response.body}');
@@ -146,6 +163,10 @@ class OpenAIEngine implements AIEngine {
 
   @override
   Stream<String> generateStream(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async* {
+    yield* _streamWithRetry(prompt, systemPrompt: systemPrompt, history: history);
+  }
+
+  Stream<String> _streamWithRetry(String prompt, {String? systemPrompt, List<MessageEntry>? history, bool isRetry = false}) async* {
     final body = _buildRequestBody(prompt, systemPrompt, history: history, stream: true);
 
     final request =
@@ -158,6 +179,12 @@ class OpenAIEngine implements AIEngine {
 
     final streamedResponse =
         await _client.send(request).timeout(const Duration(seconds: 30));
+
+    if (streamedResponse.statusCode == 429 && _keyManager != null && !isRetry) {
+      _keyManager.rotateOnRateLimit();
+      yield* _streamWithRetry(prompt, systemPrompt: systemPrompt, history: history, isRetry: true);
+      return;
+    }
 
     if (streamedResponse.statusCode != 200) {
       final errorBody = await streamedResponse.stream.bytesToString();
@@ -203,9 +230,10 @@ class OpenAIEngine implements AIEngine {
   }
 
   Map<String, String> _buildHeaders() {
+    final key = _keyManager?.activeKey ?? apiKey;
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
+      'Authorization': 'Bearer $key',
       ..._extraHeaders,
     };
   }
