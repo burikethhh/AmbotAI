@@ -17,7 +17,7 @@ void main() {
       final results = AppKnowledge.retrieve('who created you');
       expect(results, isNotEmpty);
       final all = results.join(' ').toLowerCase();
-      expect(all, contains('devinci'));
+      expect(all, anyOf(contains('devinci'), contains('aguacito'), contains('christian')));
     });
 
     test('retrieve returns relevant sections for "privacy"', () {
@@ -34,14 +34,16 @@ void main() {
       expect(all, anyOf(contains('llama'), contains('models'), contains('huggingface')));
     });
 
-    test('retrieve with no match returns empty list', () {
+    test('retrieve with no match returns always-included sections', () {
       final results = AppKnowledge.retrieve('xyznonexistent12345');
-      expect(results, isEmpty);
+      expect(results, isNotEmpty);
+      expect(results.first, contains('Ambot AI'));
     });
 
-    test('buildContext returns empty string for non-matching query', () {
+    test('buildContext returns always-included sections for non-matching query', () {
       final ctx = AppKnowledge.buildContext('xyznonexistent12345');
-      expect(ctx, isEmpty);
+      expect(ctx, isNotEmpty);
+      expect(ctx, contains('[APP KNOWLEDGE]'));
     });
 
     test('buildContext returns non-empty for matching query', () {

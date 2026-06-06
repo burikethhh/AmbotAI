@@ -51,7 +51,7 @@ class RoleCard extends ConsumerWidget {
                   Text(
                     role.name.toUpperCase(),
                     style: AppTypography.headlineSmall(c.textPrimary),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),

@@ -38,6 +38,11 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+
     expect(find.byIcon(Icons.photo_outlined), findsOneWidget);
     expect(find.byIcon(Icons.attach_file_outlined), findsOneWidget);
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);

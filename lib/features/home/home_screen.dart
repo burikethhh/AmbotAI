@@ -176,87 +176,94 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
 
-            // Menu items
-            _DrawerItem(
-              icon: Icons.chat_outlined,
-              label: 'General Chat',
-              description: 'Ask Ambot AI anything',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('generalChat');
-              },
+            // Menu items (scrollable)
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DrawerItem(
+                      icon: Icons.chat_outlined,
+                      label: 'General Chat',
+                      description: 'Ask Ambot AI anything',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('generalChat');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.forum_outlined,
+                      label: 'Role Chat',
+                      description: 'Chat with AI role personas',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    _DrawerItem(
+                      icon: Icons.image_outlined,
+                      label: 'Image Generation',
+                      description: 'Generate images from text prompts',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('imageGen');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.description_outlined,
+                      label: 'Documents',
+                      description: 'Rich text editor with AI formatting & PDF/DOCX export',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('documentGen');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.code_outlined,
+                      label: 'Programmer',
+                      description: 'Learn HTML/CSS/JS with an AI tutor',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('programmer');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.smart_toy_outlined,
+                      label: 'Agent Driven Environment',
+                      description: 'Device control & automation with AI',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('agentDrivenEnvironment');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.volume_up_outlined,
+                      label: 'Voice',
+                      description: 'Convert text to speech offline',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('voiceGen');
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.apps_outlined,
+                      label: 'All Roles',
+                      description: 'Browse & install AI role personas',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showRolesBrowser(context);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.storage_outlined,
+                      label: 'Models',
+                      description: 'Download & manage AI models',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.pushNamed('models');
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _DrawerItem(
-              icon: Icons.forum_outlined,
-              label: 'Role Chat',
-              description: 'Chat with AI role personas',
-              onTap: () => Navigator.pop(context),
-            ),
-            _DrawerItem(
-              icon: Icons.image_outlined,
-              label: 'Image Generation',
-              description: 'Generate images from text prompts',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('imageGen');
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.description_outlined,
-              label: 'Documents',
-              description: 'Rich text editor with AI formatting & PDF/DOCX export',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('documentGen');
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.code_outlined,
-              label: 'Programmer',
-              description: 'Learn HTML/CSS/JS with an AI tutor',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('programmer');
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.smart_toy_outlined,
-              label: 'Agent Driven Environment',
-              description: 'Device control & automation with AI',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('agentDrivenEnvironment');
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.volume_up_outlined,
-              label: 'Voice',
-              description: 'Convert text to speech offline',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('voiceGen');
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.apps_outlined,
-              label: 'All Roles',
-              description: 'Browse & install AI role personas',
-              onTap: () {
-                Navigator.pop(context);
-                _showRolesBrowser(context);
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.storage_outlined,
-              label: 'Models',
-              description: 'Download & manage AI models',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed('models');
-              },
-            ),
-
-            const Spacer(),
 
             // Footer
             Container(

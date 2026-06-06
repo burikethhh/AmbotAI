@@ -1,7 +1,7 @@
 {
-  "version": "1.5.0",
-  "build": 13,
+  "version": "1.6.0",
+  "build": 14,
   "releaseDate": "2026-06-06",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.5.0 - Advanced AI Model Integration\n\n- New NVIDIA NIM model catalog: DeepSeek V4 Flash, Nemotron 3 Ultra/Super/Nano, GLM-5/5.1, Kimi K2/K2.6, Llama 3.2 11B Vision\n- Programmer screen: model selector dropdown with 10 high-performance coding models, auto-fallback on failure\n- General Chat: upgraded to Llama 3.2 11B Vision multimodal model for text+image understanding\n- Nemotron Content Safety guardrail for all role chats: non-blocking safety check on every AI response\n- New OpenAIEngine factories: nvidiaNim(), glm(), kimi() for specific model APIs\n- Fixed attachment bugs: ordering, try-catch, mounted checks, 429 infinite loop, hardcoded MIME type, user bubble rendering\n- Robust error recovery: engine init failures fall back to default model gracefully"
+  "changelog": "v1.6.0 - Responsive Layout & Chat Polish\n\n- Responsive grid layout for home screen: adapts from 1 to 4 columns based on screen width\n- New responsive utilities: getDeviceType(), responsiveGridColumns(), responsivePadding(), responsiveIconSize(), responsiveFontSize()\n- Chat input bar rewritten as StatefulWidget: 5 attachment icons collapsed into single [+] expand button with AttachmentPanel\n- General Chat AI responses now render MarkdownBody instead of plain Text (fixes raw markdown display)\n- Chat bubble widths clamped to 200-700px prevents unreachably wide bubbles on tablets\n- Drawer scrolling fix: menu items wrapped in Expanded > SingleChildScrollView\n- Role card truncation fix: maxLines 2, reduced padding, smaller icons for better fit\n- Nemotron safety check wired into both chat screens for non-blocking content moderation\n- Fixed landing page download URL: corrected asset name to match GitHub release filename"
 }

@@ -3,6 +3,7 @@ import '../../../core/roles/role.dart';
 import '../../../core/roles/role_domain.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_typography.dart';
+import '../../../shared/theme/responsive.dart';
 import '../../../shared/theme/theme_colors.dart';
 import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/long_press_preview.dart';
@@ -75,39 +76,45 @@ class HomeQuickActions extends StatelessWidget {
           opacity: gridAnimation,
           child: installed.isEmpty
               ? _EmptyState(isDark: isDark, onBrowse: onBrowseAll)
-              : GridView.custom(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.78,
-                  ),
-                  childrenDelegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index == installed.length) {
-                        return _AddRoleCard(
-                          isDark: isDark,
-                          onTap: onBrowseAll,
-                        );
-                      }
-                      return LongPressPreview(
-                        onTap: () => onRoleTap(installed[index]),
-                        previewBuilder: (context) => RolePreviewPopup(
-                          role: installed[index],
-                          c: ThemeColors.of(context),
-                        ),
-                        child: _RoleCard(
-                          role: installed[index],
-                          isDark: isDark,
-                          borderColor: borderColor,
-                          textTertiary: textTertiary,
-                        ),
-                      );
-                    },
-                    childCount: installed.length + 1,
-                  ),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = responsiveGridColumns(context);
+                    final aspectRatio = crossAxisCount == 1 ? 1.6 : 0.9;
+                    return GridView.custom(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: aspectRatio,
+                      ),
+                      childrenDelegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == installed.length) {
+                            return _AddRoleCard(
+                              isDark: isDark,
+                              onTap: onBrowseAll,
+                            );
+                          }
+                          return LongPressPreview(
+                            onTap: () => onRoleTap(installed[index]),
+                            previewBuilder: (context) => RolePreviewPopup(
+                              role: installed[index],
+                              c: ThemeColors.of(context),
+                            ),
+                            child: _RoleCard(
+                              role: installed[index],
+                              isDark: isDark,
+                              borderColor: borderColor,
+                              textTertiary: textTertiary,
+                            ),
+                          );
+                        },
+                        childCount: installed.length + 1,
+                      ),
+                    );
+                  },
                 ),
         ),
       ],
@@ -141,36 +148,36 @@ class _RoleCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: borderColor, width: 2),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppIcon(
             icon: role.icon,
-            size: 44,
+            size: 40,
             backgroundColor: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
             iconColor: iconColor,
             borderColor: borderColor,
             borderWidth: 1.5,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             role.name.toUpperCase(),
             style: AppTypography.headlineSmall(textPrimary),
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             role.description,
             style: AppTypography.bodySmall(textSecondary),
-            maxLines: 3,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const Spacer(),
           Wrap(
-            spacing: 6,
-            runSpacing: 4,
+            spacing: 4,
+            runSpacing: 3,
             children: [
               _SimpleBadge(
                 label: _categoryLabel(role.category),

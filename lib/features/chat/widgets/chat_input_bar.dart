@@ -3,7 +3,7 @@ import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_typography.dart';
 import '../../../core/voice/voice_service.dart';
 
-class ChatInputBar extends StatelessWidget {
+class ChatInputBar extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool isDark;
@@ -38,164 +38,96 @@ class ChatInputBar extends StatelessWidget {
   });
 
   @override
+  State<ChatInputBar> createState() => _ChatInputBarState();
+}
+
+class _ChatInputBarState extends State<ChatInputBar> {
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_onFocusChange);
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (widget.focusNode.hasFocus && _expanded) {
+      setState(() => _expanded = false);
+    }
+  }
+
+  void _toggleExpand() {
+    setState(() => _expanded = !_expanded);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final hintColor =
-        isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final isListening = voiceState == VoiceState.listening;
-    final isDisabled = isStreaming || isGeneratingImage;
+    final bgColor = widget.isDark ? AppColors.cardDark : AppColors.cardLight;
+    final borderColor = widget.isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = widget.isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final hintColor = widget.isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final isListening = widget.voiceState == VoiceState.listening;
+    final isDisabled = widget.isStreaming || widget.isGeneratingImage;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        16,
         12,
-        16,
+        8,
+        12,
         MediaQuery.of(context).padding.bottom + 12,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         border: Border(top: BorderSide(color: borderColor)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isGeneratingImage)
+          if (widget.isGeneratingImage)
             LinearProgressIndicator(
-              value: imageGenProgress,
-              backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+              value: widget.imageGenProgress,
+              backgroundColor: widget.isDark ? AppColors.cardDark : AppColors.cardLight,
               valueColor: AlwaysStoppedAnimation<Color>(
-                isDark ? AppColors.silver : AppColors.grey,
+                widget.isDark ? AppColors.silver : AppColors.grey,
               ),
+            ),
+          if (_expanded)
+            _AttachmentPanel(
+              isDark: widget.isDark,
+              isDisabled: isDisabled,
+              onAttachImage: widget.onAttachImage,
+              onAttachFile: widget.onAttachFile,
+              onImageGen: widget.onImageGen,
+              onDocGen: widget.onDocGen,
+              onDone: () => setState(() => _expanded = false),
             ),
           Row(
             children: [
-              Semantics(
-                button: true,
-                label: 'Attach image',
-                child: GestureDetector(
-                  onTap: isDisabled ? null : onAttachImage,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: borderColor, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.photo_outlined,
-                      color: isDisabled
-                          ? (isDark ? AppColors.grey : AppColors.silver)
-                          : (isDark ? AppColors.silver : AppColors.grey),
-                      size: 20,
-                    ),
-                  ),
-                ),
+              _IconButton(
+                icon: _expanded ? Icons.close : Icons.add,
+                label: _expanded ? 'Close' : 'Attach',
+                onTap: isDisabled ? null : _toggleExpand,
+                isActive: _expanded,
+                isDark: widget.isDark,
+                borderColor: borderColor,
+                margin: const EdgeInsets.only(right: 6),
               ),
-              Semantics(
-                button: true,
-                label: 'Attach file',
-                child: GestureDetector(
-                  onTap: isDisabled ? null : onAttachFile,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: borderColor, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.attach_file_outlined,
-                      color: isDisabled
-                          ? (isDark ? AppColors.grey : AppColors.silver)
-                          : (isDark ? AppColors.silver : AppColors.grey),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              Semantics(
-                button: true,
-                label: 'Generate image',
-                child: GestureDetector(
-                  onTap: isDisabled ? null : onImageGen,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: borderColor, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.image_outlined,
-                      color: isDisabled
-                          ? (isDark ? AppColors.grey : AppColors.silver)
-                          : (isDark ? AppColors.silver : AppColors.grey),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              Semantics(
-                button: true,
-                label: 'Generate document',
-                child: GestureDetector(
-                  onTap: isDisabled ? null : onDocGen,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: borderColor, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.description_outlined,
-                      color: isDisabled
-                          ? (isDark ? AppColors.grey : AppColors.silver)
-                          : (isDark ? AppColors.silver : AppColors.grey),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              if (voiceEnabled)
-                Semantics(
-                  button: true,
-                  label: isListening ? 'Stop listening' : 'Voice input',
-                  child: GestureDetector(
-                    onTap: isDisabled ? null : onVoice,
-                    child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: isListening
-                          ? AppColors.error
-                          : (isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isListening ? AppColors.error : borderColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      isListening ? Icons.stop : Icons.mic,
-                      color: isListening ? Colors.white : (isDark ? AppColors.silver : AppColors.grey),
-                      size: 20,
-                    ),
-                  ),
-                  ),
+              if (widget.voiceEnabled)
+                _IconButton(
+                  icon: isListening ? Icons.stop : Icons.mic,
+                  label: isListening ? 'Stop' : 'Voice',
+                  onTap: isDisabled ? null : widget.onVoice,
+                  isActive: isListening,
+                  isDark: widget.isDark,
+                  borderColor: borderColor,
+                  activeColor: AppColors.error,
+                  margin: const EdgeInsets.only(right: 6),
                 ),
               Expanded(
                 child: Container(
@@ -205,26 +137,26 @@ class ChatInputBar extends StatelessWidget {
                     border: Border.all(color: borderColor, width: 2),
                   ),
                   child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
                     enabled: !isDisabled,
                     style: AppTypography.bodyMedium(textColor),
                     maxLines: 4,
                     minLines: 1,
                     textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => onSend(),
+                    onSubmitted: (_) => widget.onSend(),
                     decoration: InputDecoration(
-                      hintText: isGeneratingImage
+                      hintText: widget.isGeneratingImage
                           ? 'Generating image...'
-                          : (isStreaming ? 'Thinking...' : 'Type a message...'),
+                          : (widget.isStreaming ? 'Thinking...' : 'Type a message...'),
                       hintStyle: AppTypography.bodyMedium(hintColor),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       disabledBorder: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+                        horizontal: 16,
+                        vertical: 10,
                       ),
                       filled: false,
                     ),
@@ -234,24 +166,24 @@ class ChatInputBar extends StatelessWidget {
               const SizedBox(width: 8),
               Semantics(
                 button: true,
-                label: isGeneratingImage ? 'Generating' : 'Send message',
+                label: widget.isGeneratingImage ? 'Generating' : 'Send message',
                 child: GestureDetector(
-                  onTap: isDisabled ? null : onSend,
+                  onTap: isDisabled ? null : widget.onSend,
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: isDisabled
-                          ? (isDark ? AppColors.grey : AppColors.silver)
-                          : (isDark ? AppColors.white : AppColors.black),
+                          ? (widget.isDark ? AppColors.grey : AppColors.silver)
+                          : (widget.isDark ? AppColors.white : AppColors.black),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isGeneratingImage ? Icons.hourglass_top : Icons.arrow_upward,
+                      widget.isGeneratingImage ? Icons.hourglass_top : Icons.arrow_upward,
                       color: isDisabled
-                          ? (isDark ? AppColors.lightGrey : AppColors.offWhite)
-                          : (isDark ? AppColors.black : AppColors.white),
-                      size: 22,
+                          ? (widget.isDark ? AppColors.lightGrey : AppColors.offWhite)
+                          : (widget.isDark ? AppColors.black : AppColors.white),
+                      size: 20,
                     ),
                   ),
                 ),
@@ -259,6 +191,225 @@ class ChatInputBar extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AttachmentPanel extends StatelessWidget {
+  final bool isDark;
+  final bool isDisabled;
+  final VoidCallback onAttachImage;
+  final VoidCallback onAttachFile;
+  final VoidCallback onImageGen;
+  final VoidCallback onDocGen;
+  final VoidCallback onDone;
+
+  const _AttachmentPanel({
+    required this.isDark,
+    required this.isDisabled,
+    required this.onAttachImage,
+    required this.onAttachFile,
+    required this.onImageGen,
+    required this.onDocGen,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final cardBg = isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'ACTIONS',
+              style: AppTypography.labelSmall(textSecondary),
+            ),
+          ),
+          Row(
+            children: [
+              _AttachmentOption(
+                icon: Icons.photo_outlined,
+                label: 'Image',
+                onTap: isDisabled
+                    ? null
+                    : () {
+                        onAttachImage();
+                        onDone();
+                      },
+                isDark: isDark,
+                textPrimary: textPrimary,
+              ),
+              const SizedBox(width: 8),
+              _AttachmentOption(
+                icon: Icons.attach_file_outlined,
+                label: 'File',
+                onTap: isDisabled
+                    ? null
+                    : () {
+                        onAttachFile();
+                        onDone();
+                      },
+                isDark: isDark,
+                textPrimary: textPrimary,
+              ),
+              const SizedBox(width: 8),
+              _AttachmentOption(
+                icon: Icons.image_outlined,
+                label: 'Gen Image',
+                onTap: isDisabled
+                    ? null
+                    : () {
+                        onImageGen();
+                        onDone();
+                      },
+                isDark: isDark,
+                textPrimary: textPrimary,
+              ),
+              const SizedBox(width: 8),
+              _AttachmentOption(
+                icon: Icons.description_outlined,
+                label: 'Gen Doc',
+                onTap: isDisabled
+                    ? null
+                    : () {
+                        onDocGen();
+                        onDone();
+                      },
+                isDark: isDark,
+                textPrimary: textPrimary,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachmentOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isDark;
+  final Color textPrimary;
+
+  const _AttachmentOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isDark,
+    required this.textPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final enabled = onTap != null;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: borderColor, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: enabled
+                    ? (isDark ? AppColors.silver : AppColors.grey)
+                    : (isDark ? AppColors.grey : AppColors.silver),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label.toUpperCase(),
+                style: AppTypography.labelMicro(
+                  enabled
+                      ? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)
+                      : (isDark ? AppColors.grey : AppColors.silver),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isActive;
+  final bool isDark;
+  final Color borderColor;
+  final Color? activeColor;
+  final EdgeInsetsGeometry? margin;
+
+  const _IconButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isActive,
+    required this.isDark,
+    required this.borderColor,
+    this.activeColor,
+    this.margin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = isActive
+        ? (activeColor ?? (isDark ? AppColors.silver : AppColors.grey))
+        : (isDark ? AppColors.cardDarkElevated : AppColors.surfaceLight);
+    final iconColor = isActive
+        ? (activeColor != null ? Colors.white : (isDark ? AppColors.black : AppColors.white))
+        : (isDark ? AppColors.silver : AppColors.grey);
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          margin: margin,
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive
+                  ? (activeColor ?? borderColor)
+                  : borderColor,
+              width: 2,
+            ),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
       ),
     );
   }

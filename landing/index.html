@@ -325,8 +325,8 @@
       <p class="subtitle">Requires Android 8+ (API 26). ARM64 devices with 6+ GB RAM recommended for local AI models.</p>
       <div class="version-card">
         <div class="info">
-          <h4>v1.3.4 <span class="badge">latest</span></h4>
-          <p>Flashlight &amp; DND real toggle, CameraManager + NotificationManager</p>
+          <h4>v1.6.0 <span class="badge">latest</span></h4>
+          <p>Responsive layout, chat input bar rewrite, markdown fix, bubble clamping</p>
           <div class="meta">
             <span>~223 MB</span>
             <span>APK</span>
@@ -353,6 +353,34 @@
   <section class="changelog" id="updates">
     <div class="container">
       <h3>Updates</h3>
+
+      <div class="entry">
+        <div class="date">June 6, 2026</div>
+        <h4>v1.6.0 — Responsive Layout &amp; Chat Polish</h4>
+        <ul>
+          <li>Responsive grid layout — adapts from 1 to 4 columns based on screen width</li>
+          <li>Chat input bar rewritten — 5 attachment icons collapsed into single [+] expand button</li>
+          <li>General Chat AI responses now render MarkdownBody instead of plain Text</li>
+          <li>Chat bubble widths clamped to 200–700px preventing unreachably wide bubbles on tablets</li>
+          <li>Drawer scrolling fix, role card truncation fix, reduced padding/icons</li>
+          <li>Nemotron safety check wired into both chat screens</li>
+          <li>Fixed landing page download URL — corrected asset name to match GitHub release filename</li>
+        </ul>
+      </div>
+
+      <div class="entry">
+        <div class="date">June 6, 2026</div>
+        <h4>v1.5.0 — AI Model Catalog &amp; Safety</h4>
+        <ul>
+          <li>NVIDIA NIM model catalog — DeepSeek V4 Flash, Nemotron 3 Ultra/Super/Nano, GLM-5/5.1, Kimi K2/K2.6, Llama 3.2 11B Vision</li>
+          <li>Programmer model selector — dropdown with 10 coding models, auto-fallback on failure</li>
+          <li>General Chat upgraded to Llama 3.2 11B Vision multimodal model</li>
+          <li>Nemotron Content Safety — non-blocking safety check on every AI response</li>
+          <li>Attachment bugs fixed — ordering, try-catch, 429 infinite loop, hardcoded MIME type</li>
+          <li>Responsive grid layout — adapts from 1 to 4 columns based on screen width</li>
+          <li>Drawer scrolling fix, role card truncation fix, input bar collapse</li>
+        </ul>
+      </div>
 
       <div class="entry">
         <div class="date">June 5, 2026</div>

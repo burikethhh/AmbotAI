@@ -47,7 +47,7 @@ class ChatMessageBubble extends StatelessWidget {
         ],
         Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.78,
+            maxWidth: (MediaQuery.of(context).size.width * 0.78).clamp(200, 600),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(

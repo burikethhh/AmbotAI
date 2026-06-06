@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../../core/ai/ai_engine.dart';
 import '../../core/ai/engine_selector.dart';
 import '../../core/ai/model_prompt.dart';
@@ -619,19 +621,45 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: segments.map((seg) {
         if (seg.type == 'code') {
-          return CodeBlock(
-            code: seg.content,
-            language: seg.language ?? 'html',
-            borderColor: c.borderColor,
-            textTertiary: c.textTertiary,
-            accent: c.accent,
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: CodeBlock(
+              code: seg.content,
+              language: seg.language ?? 'html',
+              borderColor: c.borderColor,
+              textTertiary: c.textTertiary,
+              accent: c.accent,
+            ),
           );
         }
+        if (seg.content.trim().isEmpty) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(
-            seg.content,
-            style: AppTypography.bodyMedium(c.textPrimary),
+          child: MarkdownBody(
+            data: seg.content,
+            styleSheet: MarkdownStyleSheet(
+              p: AppTypography.bodyMedium(c.textPrimary),
+              strong: AppTypography.bodyMedium(c.textPrimary)
+                  .copyWith(fontWeight: FontWeight.w700),
+              h1: AppTypography.headlineLarge(c.textPrimary),
+              h2: AppTypography.headlineMedium(c.textPrimary),
+              h3: AppTypography.headlineSmall(c.textPrimary),
+              code: AppTypography.mono(c.textPrimary).copyWith(
+                backgroundColor: c.cardElevated,
+              ),
+              codeblockDecoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              listBullet: AppTypography.bodyMedium(c.textPrimary),
+              blockquoteDecoration: BoxDecoration(
+                border: Border(left: BorderSide(color: c.borderColor, width: 2)),
+                color: c.cardElevated.withValues(alpha: 0.3),
+              ),
+            ),
+            builders: {
+              'codeBlock': _GeneralCodeBlockBuilder(c),
+            },
           ),
         );
       }).toList(),
@@ -822,4 +850,26 @@ class _ChatMessage {
     this.attachmentPath,
     this.attachmentType,
   });
+}
+
+class _GeneralCodeBlockBuilder extends MarkdownElementBuilder {
+  final ThemeColors c;
+
+  _GeneralCodeBlockBuilder(this.c);
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final code = element.textContent;
+    final lang = element.attributes['language'] ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: CodeBlock(
+        code: code,
+        language: lang,
+        borderColor: c.borderColor,
+        textTertiary: c.textTertiary,
+        accent: c.accent,
+      ),
+    );
+  }
 }

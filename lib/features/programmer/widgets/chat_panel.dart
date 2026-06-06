@@ -134,7 +134,7 @@ class ChatPanel extends StatelessWidget {
 
   Widget _buildUserBubble(String content, ThemeColors c, double screenWidth) {
     return Container(
-      constraints: BoxConstraints(maxWidth: screenWidth * 0.85),
+      constraints: BoxConstraints(maxWidth: (screenWidth * 0.85).clamp(200, 600)),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: c.cardColor,
@@ -179,7 +179,7 @@ class ChatPanel extends StatelessWidget {
 
     final segments = _parseSegments(content);
     return Container(
-      constraints: BoxConstraints(maxWidth: screenWidth * 0.92),
+      constraints: BoxConstraints(maxWidth: (screenWidth * 0.92).clamp(200, 700)),
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         border: Border.all(color: c.borderColor, width: 2),
