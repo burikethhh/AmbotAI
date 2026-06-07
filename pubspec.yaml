@@ -1,7 +1,7 @@
 name: ambot_ai
 description: "Ambot AI - Your offline AI classroom"
 publish_to: 'none'
-version: 1.6.4+19
+version: 1.6.5+20
 
 environment:
   sdk: ^3.10.7
@@ -45,6 +45,7 @@ dependencies:
   markdown: ^7.3.1
   highlight: ^0.7.0
   package_info_plus: ^9.0.1
+  archive: ^4.0.9
 
 dev_dependencies:
   flutter_test:

@@ -75,6 +75,13 @@ class AppKnowledge {
         'and leverages native C++ bindings through llama.cpp for on-device LLM inference. '
         'The ex-girlfriend inspiration story (nursing student named Juridel, broken relationship, "Ambot ay" naming) '
         'is a key part of the app\'s origin and the creator often shares it when asked about the backstory.',
+    'WEB FETCH CAPABILITY: You have the ability to fetch live web content by outputting [FETCH:url] in your response. '
+        'Use this when you need current information, latest trends, recent events, or real-time data. '
+        'Only fetch from public web pages. Max 5 fetches per response. '
+        'Format: [FETCH:https://example.com]. The system will fetch the URL, receive the content, '
+        'and re-prompt you to answer the user incorporating the web data. '
+        'Example: If asked about latest AI news, output [FETCH:https://news.google.com/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pWVXlnQVAB] '
+        'then answer based on the fetched content. Do NOT use [FETCH] for questions you can answer from your training data.',
   ];
 
   static const _sections = [
@@ -182,6 +189,14 @@ class AppKnowledge {
         'The app uses Material Design components with a custom monochrome theme. '
         'No emojis are used anywhere in the interface — all icons are SVG-based. '
         'The typography uses the Inter font family for clean, professional text rendering.',
+
+    // === WEB FETCH CAPABILITY ===
+    'Ambot AI can fetch live web content to answer questions about current events, trends, and real-time data. '
+        'When you need up-to-date information, the AI can retrieve content from websites using the web fetch system. '
+        'To fetch web content, the AI outputs [FETCH:url] in its response. '
+        'The app automatically detects this tag, fetches the content, and re-prompts the AI to incorporate the web data into its final answer. '
+        'The system supports up to 5 fetches per turn with a 1-minute rate limit. '
+        'Only public web pages and APIs can be fetched — no authentication or login-based sites.',
   ];
 }
 

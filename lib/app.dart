@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/ai/engine_selector.dart';
 import 'core/providers/app_providers.dart';
 import 'core/router/app_router.dart';
+import 'core/services/error_boundary.dart';
 import 'shared/theme/app_theme.dart';
 import 'shared/widgets/download_banner.dart';
 
@@ -51,21 +52,23 @@ class _AmbotAppState extends ConsumerState<AmbotApp>
   Widget build(BuildContext context) {
     final isDark = ref.watch(themeProvider);
 
-    return MaterialApp.router(
-      title: 'Ambot',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      builder: (context, child) {
-        return Column(
-          children: [
-            const DownloadBanner(),
-            Expanded(child: child ?? const SizedBox.shrink()),
-          ],
-        );
-      },
-      routerConfig: createRouter(ref),
+    return AmbotErrorBoundary(
+      child: MaterialApp.router(
+        title: 'Ambot',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+        builder: (context, child) {
+          return Column(
+            children: [
+              const DownloadBanner(),
+              Expanded(child: child ?? const SizedBox.shrink()),
+            ],
+          );
+        },
+        routerConfig: createRouter(ref),
+      ),
     );
   }
 }

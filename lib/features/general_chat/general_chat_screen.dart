@@ -25,6 +25,7 @@ import '../../shared/widgets/code_block.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/connectivity.dart';
 import '../../core/services/document_reader.dart';
+import '../../core/services/web_fetch_service.dart';
 import '../../core/voice/engines/android_voice_engine.dart';
 import '../../core/voice/voice_service.dart';
 import '../../shared/theme/app_colors.dart';
@@ -132,12 +133,12 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     if (nvidiaKey == null) return;
     final model = NvidiaModelCatalog.llama32Vision;
     try {
-      final engine = OpenAIEngine.nvidiaNim(
+      _visionEngine = OpenAIEngine.nvidiaNim(
         apiKey: nvidiaKey,
         model: model.id,
         maxTokens: model.maxTokens,
       );
-      engine.initialize().then((_) {
+      _visionEngine!.initialize().then((_) {
         if (mounted) setState(() => _visionEngineReady = true);
       }).catchError((e) {
         debugPrint('GENERAL_CHAT: vision engine init failed: $e');
@@ -298,7 +299,7 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
     setState(() => _messages.add(aiMessage));
     _scrollToBottom();
 
-    _streamResponse(text, engine);
+    await _streamResponse(text, engine);
   }
 
   Future<void> _sendWithImageAttachment(String text) async {
@@ -388,10 +389,12 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
 
   // --- Streaming ---
 
-  void _streamResponse(String text, dynamic engine) {
+  Future<void> _streamResponse(String text, dynamic engine) async {
     final buffer = StringBuffer();
     _aiStreamSub?.cancel();
     final appKnowledge = AppKnowledge.buildContext(text);
+    final completer = Completer<String>();
+
     _aiStreamSub = engine.generateStream(text, systemPrompt:
         'You are Ambot AI, a general-purpose helpful assistant.$appKnowledge').listen(
       (chunk) {
@@ -412,10 +415,101 @@ class _GeneralChatScreenState extends ConsumerState<GeneralChatScreen> {
         } else {
           buffer.write('\n\n*Error: $errorText*');
         }
-        _finalizeMessage(buffer.toString().trim());
+        completer.complete(buffer.toString().trim());
       },
-      onDone: () => _finalizeMessage(buffer.toString().trim()),
+      onDone: () => completer.complete(buffer.toString().trim()),
     );
+
+    final content = await completer.future;
+    _finalizeMessage(content);
+
+    // Web fetch processing
+    if (content.isNotEmpty) {
+      final fetchUrls = WebFetchService.extractFetchUrls(content);
+      if (fetchUrls.isNotEmpty) {
+        await _processWebFetches(text, content, engine, fetchUrls);
+      }
+    }
+  }
+
+  Future<void> _processWebFetches(
+    String userText,
+    String originalContent,
+    dynamic engine,
+    List<String> urls,
+  ) async {
+    WebFetchService.instance.startTurn('general-chat');
+    final results = <FetchResult>[];
+    final fetchesToDo = urls.take(5).toList();
+
+    setState(() {
+      final cleanContent = WebFetchService.removeFetchTags(originalContent);
+      _isStreaming = true;
+      _messages.last = _ChatMessage(
+        content: '[Fetching web data from ${fetchesToDo.length} source${fetchesToDo.length > 1 ? 's' : ''}...]\n\n$cleanContent',
+        isUser: false,
+        isStreaming: true,
+      );
+    });
+
+    for (final url in fetchesToDo) {
+      if (!WebFetchService.instance.canFetch) break;
+      final result = await WebFetchService.instance.fetch(url);
+      results.add(result);
+    }
+
+    final fetchedBlock = results.map((r) => r.display).join('\n\n---\n\n');
+    if (fetchedBlock.isEmpty || !mounted) {
+      setState(() => _isStreaming = false);
+      return;
+    }
+
+    setState(() {
+      _messages.last = _ChatMessage(
+        content: '${WebFetchService.removeFetchTags(originalContent)}\n\n_Web data fetched. Analyzing..._',
+        isUser: false,
+        isStreaming: true,
+      );
+    });
+
+    final fetchPrompt = 'You are Ambot AI. The user asked a question that needs web data. '
+        'Below is the fetched web content. Use it to answer the user\'s original question accurately. '
+        'Cite sources where applicable. If the fetched content is insufficient, say so.\n\n'
+        'FETCHED CONTENT:\n$fetchedBlock';
+    final fetchBuffer = StringBuffer();
+
+    try {
+      await for (final chunk in engine.generateStream(
+        userText,
+        systemPrompt: fetchPrompt,
+      )) {
+        fetchBuffer.write(chunk);
+        if (mounted) {
+          setState(() {
+            _messages.last = _ChatMessage(
+              content: fetchBuffer.toString(),
+              isUser: false,
+              isStreaming: true,
+            );
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      fetchBuffer.write('\n\n_Fetch analysis failed: ${e.toString().replaceFirst("Exception: ", "")}_');
+    }
+
+    if (mounted) {
+      setState(() {
+        _messages.last = _ChatMessage(
+          content: fetchBuffer.toString().trim(),
+          isUser: false,
+          isStreaming: false,
+        );
+        _isStreaming = false;
+      });
+      _scrollToBottom();
+    }
   }
 
   void _cancelStream() {

@@ -32,14 +32,14 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   ModelInfo? _recommendedModel;
   bool _detectingModel = true;
-  int _imageRemainingToday = 3;
+  int _imageRemainingToday = 10;
   static final _imageLimitTracker = DailyLimitTracker('image_gen');
 
   @override
   void initState() {
     super.initState();
     _detectModel();
-    _imageLimitTracker.remaining(3).then((r) {
+    _imageLimitTracker.remaining(10).then((r) {
       if (mounted) setState(() => _imageRemainingToday = r);
     });
   }

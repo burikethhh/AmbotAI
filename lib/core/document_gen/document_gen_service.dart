@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'pdf_generator.dart';
+import 'docx_generator.dart';
 import '../storage/output_storage_service.dart';
 import '../ai/ai_engine.dart';
 
@@ -276,23 +277,15 @@ class DocumentGenService {
     return pdfPath;
   }
 
-  /// Export a document to DOCX-compatible RTF file.
+  /// Export a document to DOCX file.
   Future<String> exportToDocx(GeneratedDocument document) async {
-    final filePath = await OutputStorageService.instance.generatePath(OutputType.documents, 'rtf');
-    final file = File(filePath);
-
-    final buffer = StringBuffer();
-    buffer.writeln('{\\rtf1\\ansi\\deff0');
-    buffer.writeln('{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}');
-    buffer.writeln('\\pard\\qc\\fs32\\b ${_escapeRtf(document.title)}\\b0\\par');
-    buffer.writeln('\\pard\\fs20\\par');
-    buffer.writeln('\\pard\\fs20 ${_escapeRtf(document.content)}\\par');
-    buffer.writeln('}');
-
-    await file.writeAsString(buffer.toString());
-    document.markDocxExported(file.path);
+    final filePath = await DocxGenerator.generateDocx(
+      title: document.title,
+      content: document.content,
+    );
+    document.markDocxExported(filePath);
     await _saveTags(filePath, document.tags);
-    return file.path;
+    return filePath;
   }
 
   /// Export a document to text file.
@@ -381,14 +374,6 @@ class DocumentGenService {
   /// Delete a generated document.
   Future<void> deleteDocument(String path) async {
     await OutputStorageService.instance.deleteFile(path);
-  }
-
-  String _escapeRtf(String text) {
-    return text
-        .replaceAll('\\', '\\\\')
-        .replaceAll('{', '\\{')
-        .replaceAll('}', '\\}')
-        .replaceAll('\n', '\\par\n');
   }
 
   Future<void> _saveTags(String filePath, List<String> tags) async {

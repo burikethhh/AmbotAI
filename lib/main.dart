@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +14,19 @@ import 'features/programmer/programmer_store.dart';
 import 'app.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  await Hive.initFlutter();
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('AMBOT_ERROR: ${details.exception}');
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('AMBOT_ERROR: $error\n$stack');
+      return true;
+    };
+
+    await Hive.initFlutter();
   await MemoryService.instance.init();
   await ConversationSummaryStore.instance.init();
   await ActionLog.instance.init();
@@ -45,4 +57,7 @@ void main() async {
       child: const AmbotApp(),
     ),
   );
+  }, (error, stack) {
+    debugPrint('AMBOT_FATAL: $error\n$stack');
+  });
 }

@@ -101,7 +101,7 @@ class OpenAIEngine implements AIEngine {
   /// Pre-configured for GLM models via NVIDIA NIM.
   factory OpenAIEngine.glm({
     required String apiKey,
-    String model = 'z-ai/glm5',
+    String model = 'nvidia/nemotron-3-super-120b-a12b',
   }) {
     return OpenAIEngine(
       apiKey: apiKey,

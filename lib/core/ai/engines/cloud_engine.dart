@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:http/http.dart' as http;
 import '../ai_engine.dart';
 
 class CloudEngine implements AIEngine {
   final String apiKey;
   bool _isReady = false;
-  HttpClient? _client;
 
   static const _baseUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models';
+      'https://generativelanguage.googleapis.com/v1beta/openai';
   static const _model = 'gemini-2.0-flash-lite';
 
   CloudEngine({required this.apiKey});
@@ -17,53 +16,51 @@ class CloudEngine implements AIEngine {
   @override
   Future<void> initialize() async {
     _isReady = apiKey.isNotEmpty;
-    _client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 10)
-      ..idleTimeout = const Duration(seconds: 30);
   }
 
   @override
   Future<String> generate(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async {
-    final body = _buildRequestBody(prompt, systemPrompt, history);
-    final url = '$_baseUrl/$_model:generateContent';
-    final client = _client;
+    final body = _buildRequestBody(prompt, systemPrompt: systemPrompt, history: history, stream: false);
 
-    final request = await client!.postUrl(Uri.parse(url));
-    request.headers.set('Content-Type', 'application/json');
-    request.headers.set('x-goog-api-key', apiKey);
-    request.write(jsonEncode(body));
-
-    final response = await request.close();
-    final responseBody = await response.transform(utf8.decoder).join();
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/chat/completions'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $apiKey',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
-      throw Exception('Gemini API error ${response.statusCode}: $responseBody');
+      throw Exception('API error ${response.statusCode}: ${response.body}');
     }
 
-    final json = jsonDecode(responseBody) as Map<String, dynamic>;
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
     return _extractText(json);
   }
 
   @override
   Stream<String> generateStream(String prompt, {String? systemPrompt, List<MessageEntry>? history}) async* {
-    final body = _buildRequestBody(prompt, systemPrompt, history);
-    final url = '$_baseUrl/$_model:streamGenerateContent?alt=sse';
-    final client = _client;
+    final body = _buildRequestBody(prompt, systemPrompt: systemPrompt, history: history, stream: true);
 
-    final request = await client!.postUrl(Uri.parse(url));
-    request.headers.set('Content-Type', 'application/json');
-    request.headers.set('x-goog-api-key', apiKey);
-    request.write(jsonEncode(body));
+    final client = http.Client();
+    http.StreamedResponse? streamedResponse;
+    try {
+      final request = http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
+        ..headers['Content-Type'] = 'application/json'
+        ..headers['Authorization'] = 'Bearer $apiKey'
+        ..body = jsonEncode(body);
 
-    final response = await request.close();
+      streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
 
-    if (response.statusCode != 200) {
-      final errorBody = await response.transform(utf8.decoder).join();
-      throw Exception('Gemini API error ${response.statusCode}: $errorBody');
-    }
+      if (streamedResponse.statusCode != 200) {
+        final errorBody = await streamedResponse.stream.bytesToString();
+        throw Exception('API error ${streamedResponse.statusCode}: $errorBody');
+      }
 
-      // Parse SSE stream
-      final lineStream = response.transform(utf8.decoder);
+      final lineStream = streamedResponse.stream.transform(utf8.decoder);
       String buffer = '';
 
       await for (final chunk in lineStream) {
@@ -80,31 +77,33 @@ class CloudEngine implements AIEngine {
 
             try {
               final json = jsonDecode(data) as Map<String, dynamic>;
-              final text = _extractText(json);
-              if (text.isNotEmpty) {
-                yield text;
+              final choices = json['choices'] as List?;
+              if (choices != null && choices.isNotEmpty) {
+                final delta = choices[0]['delta'] as Map<String, dynamic>?;
+                final content = delta?['content'] as String?;
+                if (content != null && content.isNotEmpty) {
+                  yield content;
+                }
               }
             } catch (_) {
               // Skip malformed chunks
             }
           }
+        }
       }
+    } finally {
+      client.close();
     }
   }
 
   @override
-  Future<void> dispose() async {
-    _client?.close();
-  }
+  Future<void> dispose() async {}
 
   @override
-  void cancelStream() {
-    _client?.close(force: true);
-    _client = HttpClient();
-  }
+  void cancelStream() {}
 
   @override
-  Future<void> handleMemoryPressure() async {} // no-op for cloud
+  Future<void> handleMemoryPressure() async {}
 
   @override
   String get engineName => 'Gemini Cloud ($_model)';
@@ -115,81 +114,42 @@ class CloudEngine implements AIEngine {
   @override
   bool get isReady => _isReady;
 
-  Map<String, dynamic> _buildRequestBody(String prompt, String? systemPrompt, List<MessageEntry>? history) {
-    final contents = <Map<String, dynamic>>[];
+  Map<String, dynamic> _buildRequestBody(
+    String prompt, {
+    String? systemPrompt,
+    List<MessageEntry>? history,
+    required bool stream,
+  }) {
+    final messages = <Map<String, dynamic>>[];
 
-    final roleMap = <String, String>{
-      'user': 'user',
-      'assistant': 'model',
-      'ai': 'model',
-    };
+    if (systemPrompt != null && systemPrompt.isNotEmpty) {
+      messages.add({'role': 'system', 'content': systemPrompt});
+    }
 
     if (history != null) {
       for (final entry in history) {
-        final geminiRole = roleMap[entry.role] ?? 'user';
-        contents.add({
-          'role': geminiRole,
-          'parts': [
-            {'text': entry.content}
-          ],
-        });
+        final role = entry.role == 'ai' ? 'assistant' : entry.role;
+        messages.add({'role': role, 'content': entry.content});
       }
     }
 
-    contents.add({
-      'role': 'user',
-      'parts': [
-        {'text': prompt}
-      ],
-    });
+    messages.add({'role': 'user', 'content': prompt});
 
     return {
-      if (systemPrompt != null && systemPrompt.isNotEmpty)
-        'systemInstruction': {
-          'parts': [
-            {'text': systemPrompt}
-          ],
-        },
-      'contents': contents,
-      'generationConfig': {
-        'temperature': 0.7,
-        'maxOutputTokens': 2048,
-        'topP': 0.95,
-        'topK': 40,
-      },
-      'safetySettings': [
-        {
-          'category': 'HARM_CATEGORY_HARASSMENT',
-          'threshold': 'BLOCK_ONLY_HIGH',
-        },
-        {
-          'category': 'HARM_CATEGORY_HATE_SPEECH',
-          'threshold': 'BLOCK_ONLY_HIGH',
-        },
-        {
-          'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          'threshold': 'BLOCK_ONLY_HIGH',
-        },
-        {
-          'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          'threshold': 'BLOCK_ONLY_HIGH',
-        },
-      ],
+      'model': _model,
+      'messages': messages,
+      'temperature': 0.7,
+      'max_tokens': 2048,
+      'stream': stream,
     };
   }
 
   String _extractText(Map<String, dynamic> json) {
     try {
-      final candidates = json['candidates'] as List?;
-      if (candidates == null || candidates.isEmpty) return '';
-
-      final content = candidates[0]['content'] as Map<String, dynamic>?;
-      if (content == null) return '';
-
-      final parts = content['parts'] as List?;
-      if (parts == null || parts.isEmpty) return '';
-
-      return parts[0]['text'] as String? ?? '';
+      final choices = json['choices'] as List?;
+      if (choices == null || choices.isEmpty) return '';
+      final message = choices[0]['message'] as Map<String, dynamic>?;
+      return message?['content'] as String? ?? '';
     } catch (_) {
       return '';
     }

@@ -26,6 +26,7 @@ import '../../core/ai/engine_selector.dart' show EngineMode;
 import '../../core/ai/model_prompt.dart';
 import '../../core/ai/nvidia_vision.dart';
 import '../../core/ai/nemotron_safety.dart';
+import '../../core/services/web_fetch_service.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/theme_colors.dart';
 import 'chat_utils.dart';
@@ -292,12 +293,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         );
         setState(() => _messages = [..._messages, userMessage, aiMessage]);
         ref.read(conversationsProvider.notifier).addMessage(widget.role.id, conversation.id, userMessage);
-        ref.read(conversationsProvider.notifier).addMessage(widget.role.id, conversation.id, aiMessage);
-        final updatedConv = Conversation(
-          id: conversation.id, roleId: conversation.roleId,
-          messages: _messages, createdAt: conversation.createdAt, updatedAt: DateTime.now(),
-        );
-        await ConversationStore.instance.save(updatedConv);
+        await _saveAndPersistMessage(conversation, aiMessage);
         _scrollToBottom();
         return;
       }
@@ -334,64 +330,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     });
     _scrollToBottom();
 
-    // Memory retrieval
-    final retriever = ref.read(memoryRetrieverProvider);
-    final memories = await retriever.retrieve(
-      query: text,
-      roleId: widget.role.id,
-      conversationId: conversation.id,
-      topK: 5,
-    );
-    final memoryBlock = retriever.renderForPrompt(memories);
-
-    // Build message history for structured KV cache reuse
     final historyList = _buildHistoryEntries();
-
-    // Keep summary-based context for very long conversations
-    String summaryPrefix = '';
-    if (historyList.length > 12) {
-      final summaryBlock = ConversationSummaryStore.instance.renderForPrompt(
-        widget.role.id, text, limit: 2,
-      );
-      if (summaryBlock.isNotEmpty) {
-        summaryPrefix = '\n\nEarlier context:\n$summaryBlock';
-      }
-    }
-
-    String modeInstruction = '';
-    switch (_responseMode) {
-      case ResponseMode.thinking:
-        modeInstruction =
-            '\n\nBefore answering, think through your reasoning step by step inside <thinking> tags. Then provide your final answer after the closing tag.';
-        break;
-      case ResponseMode.plan:
-        modeInstruction =
-            '\n\nFirst, create a numbered step-by-step plan inside <plan> tags. Each step should be on its own line starting with "Step N: ". Then execute the plan and provide your final answer after the closing tag.';
-        break;
-      case ResponseMode.chat:
-        break;
-    }
-
-    final appKnowledgeBlock = AppKnowledge.buildContext(text);
-
-    // Static system prompt — no embedded history, enables KV cache reuse
-    final staticPrompt = widget.role.systemPrompt + appKnowledgeBlock + modeInstruction;
-
-    // Conversation summaries for context recycling
-    final summaryBlock = ConversationSummaryStore.instance.renderForPrompt(
-      widget.role.id,
-      text,
-      limit: 3,
-    );
-    final contextBlock = memoryBlock.isEmpty
-        ? (summaryBlock.isEmpty ? summaryPrefix : summaryPrefix.isNotEmpty
-            ? '$summaryPrefix\n\n$summaryBlock'
-            : summaryBlock)
-        : '$memoryBlock${summaryPrefix.isNotEmpty ? '\n\n$summaryPrefix' : ''}${summaryBlock.isNotEmpty ? '\n\n$summaryBlock' : ''}';
-    final systemPrompt = contextBlock.isEmpty
-        ? staticPrompt
-        : '$staticPrompt\n\n$contextBlock';
-
+    final systemPrompt = await _buildChatPrompt(text, historyList);
     await _streamAndFinalize(text, systemPrompt, aiMessage, conversation, history: historyList);
   }
 
@@ -494,12 +434,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       _isStreaming = false;
     });
     _scrollToBottom();
-    ref.read(conversationsProvider.notifier).addMessage(widget.role.id, _conversation!.id, _messages.last);
-    final updatedConv = Conversation(
-      id: _conversation!.id, roleId: widget.role.id,
-      messages: _messages, createdAt: _conversation!.createdAt, updatedAt: DateTime.now(),
-    );
-    await ConversationStore.instance.save(updatedConv);
+    await _saveAndPersistMessage(_conversation!, _messages.last);
   }
 
   /// Shared streaming helper used by normal chat and Q&A mode.
@@ -511,6 +446,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               content: m.content,
             ))
         .toList();
+  }
+
+  Future<String> _buildChatPrompt(String text, List<MessageEntry> historyList) async {
+    final retriever = ref.read(memoryRetrieverProvider);
+    final memories = await retriever.retrieve(
+      query: text,
+      roleId: widget.role.id,
+      conversationId: _conversation!.id,
+      topK: 5,
+    );
+    final memoryBlock = retriever.renderForPrompt(memories);
+
+    String summaryPrefix = '';
+    if (historyList.length > 12) {
+      final summaryBlock = ConversationSummaryStore.instance.renderForPrompt(
+        widget.role.id, text, limit: 2,
+      );
+      if (summaryBlock.isNotEmpty) {
+        summaryPrefix = '\n\nEarlier context:\n$summaryBlock';
+      }
+    }
+
+    String modeInstruction = '';
+    switch (_responseMode) {
+      case ResponseMode.thinking:
+        modeInstruction =
+            '\n\nBefore answering, think through your reasoning step by step inside <thinking> tags. Then provide your final answer after the closing tag.';
+        break;
+      case ResponseMode.plan:
+        modeInstruction =
+            '\n\nFirst, create a numbered step-by-step plan inside <plan> tags. Each step should be on its own line starting with "Step N: ". Then execute the plan and provide your final answer after the closing tag.';
+        break;
+      case ResponseMode.chat:
+        break;
+    }
+
+    final appKnowledgeBlock = AppKnowledge.buildContext(text);
+    final staticPrompt = widget.role.systemPrompt + appKnowledgeBlock + modeInstruction;
+
+    final summaryBlock = ConversationSummaryStore.instance.renderForPrompt(
+      widget.role.id, text, limit: 3,
+    );
+    final contextBlock = memoryBlock.isEmpty
+        ? (summaryBlock.isEmpty ? summaryPrefix : summaryPrefix.isNotEmpty
+            ? '$summaryPrefix\n\n$summaryBlock'
+            : summaryBlock)
+        : '$memoryBlock${summaryPrefix.isNotEmpty ? '\n\n$summaryPrefix' : ''}${summaryBlock.isNotEmpty ? '\n\n$summaryBlock' : ''}';
+    return contextBlock.isEmpty
+        ? staticPrompt
+        : '$staticPrompt\n\n$contextBlock';
+  }
+
+  Future<void> _saveAndPersistMessage(Conversation conversation, ChatMessage message) async {
+    ref.read(conversationsProvider.notifier).addMessage(widget.role.id, conversation.id, message);
+    final updatedConv = Conversation(
+      id: conversation.id,
+      roleId: conversation.roleId,
+      messages: _messages,
+      createdAt: conversation.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    await ConversationStore.instance.save(updatedConv);
   }
 
   Future<void> _streamAndFinalize(
@@ -628,27 +625,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     });
     _scrollToBottom();
 
-    ref
-        .read(conversationsProvider.notifier)
-        .addMessage(widget.role.id, conversation.id, finalMessage);
+    await _saveAndPersistMessage(conversation, finalMessage);
 
-    // Persist to Hive
-    final updatedConv = Conversation(
-      id: conversation.id,
-      roleId: conversation.roleId,
-      messages: _messages,
-      createdAt: conversation.createdAt,
-      updatedAt: DateTime.now(),
-    );
-    await ConversationStore.instance.save(updatedConv);
-
-    // Auto-generate title from first message
     if (_messages.where((m) => m.role == MessageRole.user).length == 1) {
       final title = ConversationStore.generateTitle(_messages);
       await ConversationStore.instance.setTitle(conversation.id, title);
     }
 
-    // Memory extraction
     final extractor = ref.read(memoryExtractorProvider);
     await extractor.extractAndStore(
       userMessage: userText,
@@ -658,13 +641,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       defaultScope: widget.role.defaultMemoryScope,
     );
 
-    // Extract conversation summary when conversation gets long
     final userMsgCount = _messages.where((m) => m.role == MessageRole.user).length;
     if (userMsgCount > 0 && userMsgCount % 10 == 0) {
       await _extractConversationSummary(conversation.id);
     }
 
-    // Non-blocking safety check (role chats)
+    await _processWebFetches(userText, finalMessage, fullPrompt, conversation);
+
     _runSafetyCheck(parsed.content);
   }
 
@@ -684,6 +667,93 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         );
       }
     }).catchError((_) {});
+  }
+
+  Future<void> _processWebFetches(
+    String userText,
+    ChatMessage finalMessage,
+    String fullPrompt,
+    Conversation conversation,
+  ) async {
+    final fetchUrls = WebFetchService.extractFetchUrls(finalMessage.content);
+    if (fetchUrls.isEmpty || !mounted) return;
+
+    final turnId = _conversation?.id ?? '';
+    WebFetchService.instance.startTurn(turnId);
+    final results = <FetchResult>[];
+    final fetchesToDo = fetchUrls.take(5).toList();
+
+    setState(() {
+      final cleanContent = WebFetchService.removeFetchTags(finalMessage.content);
+      _messages.last = finalMessage.copyWith(
+        content: '[Fetching web data from ${fetchesToDo.length} source${fetchesToDo.length > 1 ? 's' : ''}...]\n\n$cleanContent',
+      );
+    });
+
+    for (final url in fetchesToDo) {
+      if (!WebFetchService.instance.canFetch) break;
+      final result = await WebFetchService.instance.fetch(url);
+      results.add(result);
+    }
+
+    final fetchedBlock = results.map((r) => r.display).join('\n\n---\n\n');
+    if (fetchedBlock.isEmpty || !mounted) return;
+
+    setState(() {
+      _isStreaming = true;
+      _messages.last = finalMessage.copyWith(
+        content: '${WebFetchService.removeFetchTags(finalMessage.content)}\n\n_Web data fetched. Analyzing..._',
+      );
+    });
+
+    try {
+      final fetchSystemPrompt = 'You are Ambot AI. The user asked a question that needs web data. '
+          'Below is the fetched web content. Use it to answer the user\'s original question accurately. '
+          'Cite sources where applicable. If the fetched content is insufficient, say so.\n\n'
+          'FETCHED CONTENT:\n$fetchedBlock\n\n'
+          'Original system instructions:\n$fullPrompt';
+      final engine = ref.read(aiEngineProvider);
+      final fetchBuffer = StringBuffer();
+      final fetchId = '$turnId-fetch';
+      WebFetchService.instance.startTurn(fetchId);
+
+      await for (final chunk in engine.generateStream(
+        userText,
+        systemPrompt: fetchSystemPrompt,
+        history: _buildHistoryEntries(),
+      )) {
+        fetchBuffer.write(chunk);
+        if (mounted) {
+          final parsed = parseResponse(fetchBuffer.toString());
+          setState(() {
+            _messages.last = finalMessage.copyWith(
+              content: parsed.content,
+              thinking: parsed.thinking,
+              planSteps: parsed.planSteps,
+            );
+          });
+          _scrollToBottom();
+        }
+      }
+
+      if (mounted) {
+        _messages.last = ChatMessage(
+          content: parseResponse(fetchBuffer.toString()).content,
+          role: MessageRole.assistant,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _messages.last = finalMessage.copyWith(
+          content: '${WebFetchService.removeFetchTags(finalMessage.content)}\n\n_Fetch analysis failed: ${e.toString().replaceFirst("Exception: ", "")}_',
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isStreaming = false);
+      await _saveAndPersistMessage(conversation, _messages.last);
+    }
   }
 
   Future<void> _generateImage(String prompt) async {

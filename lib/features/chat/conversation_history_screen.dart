@@ -24,13 +24,45 @@ class _ConversationHistoryScreenState
   int _refreshTick = 0;
   String _searchQuery = '';
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  static const int _pageSize = 20;
+  int _displayedCount = 20;
 
-  void _refresh() => setState(() => _refreshTick++);
+  void _refresh() {
+    setState(() {
+      _refreshTick++;
+      _displayedCount = _pageSize;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    if (_searchQuery.isNotEmpty) return;
+    final total = ConversationStore.instance.getByRole(widget.roleId).length;
+    if (_displayedCount < total) {
+      setState(() {
+        _displayedCount = (_displayedCount + _pageSize).clamp(0, total);
+      });
+    }
   }
 
   @override
@@ -46,6 +78,12 @@ class _ConversationHistoryScreenState
     final conversations = _searchQuery.isEmpty
         ? allConvs
         : ConversationStore.instance.search(_searchQuery, widget.roleId);
+
+    // Paginate: search shows all results, normal view is paginated
+    final displayList = _searchQuery.isEmpty
+        ? allConvs.take(_displayedCount).toList()
+        : conversations;
+    final hasMore = _searchQuery.isEmpty && _displayedCount < allConvs.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +112,12 @@ class _ConversationHistoryScreenState
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
+              onChanged: (v) {
+                setState(() {
+                  _searchQuery = v;
+                  _displayedCount = _pageSize;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Search conversations...',
                 prefixIcon: Icon(Icons.search, color: c.textSecondary, size: 20),
@@ -84,7 +127,10 @@ class _ConversationHistoryScreenState
                         tooltip: 'Clear search',
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _searchQuery = '');
+                          setState(() {
+                            _searchQuery = '';
+                            _displayedCount = _pageSize;
+                          });
                         },
                       )
                     : null,
@@ -112,11 +158,19 @@ class _ConversationHistoryScreenState
             child: conversations.isEmpty
                 ? _EmptyState(isDark: c.isDark, role: role)
                 : ListView.separated(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: conversations.length,
+                    itemCount: displayList.length + (hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final conv = conversations[index];
+                      if (hasMore && index == displayList.length) {
+                        return _LoadMoreIndicator(
+                          borderColor: c.borderColor,
+                          textSecondary: c.textSecondary,
+                          onTap: _loadMore,
+                        );
+                      }
+                      final conv = displayList[index];
                       final title = ConversationStore.instance.getTitle(conv.id) ??
                           ConversationStore.generateTitle(conv.messages);
                       final lastMsg = conv.messages.lastOrNull;
@@ -195,6 +249,43 @@ class _ConversationHistoryScreenState
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
     return '${dt.month}/${dt.day}';
+  }
+}
+
+class _LoadMoreIndicator extends StatelessWidget {
+  const _LoadMoreIndicator({
+    required this.borderColor,
+    required this.textSecondary,
+    required this.onTap,
+  });
+
+  final Color borderColor;
+  final Color textSecondary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor, width: 2),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.expand_more, size: 18, color: textSecondary),
+            const SizedBox(width: 8),
+            Text(
+              'LOAD MORE',
+              style: AppTypography.labelMedium(textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

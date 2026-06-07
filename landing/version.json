@@ -1,7 +1,7 @@
 {
-  "version": "1.6.4",
-  "build": 19,
-  "releaseDate": "2026-06-06",
+  "version": "1.6.5",
+  "build": 20,
+  "releaseDate": "2026-06-07",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.6.4 — SSE Streaming Fix & Multi-Message Reliability\n\n- Fixed \"Stream has already been listened to\" error on 2nd+ chat messages\n- OpenAIEngine now creates fresh HTTP connection per SSE stream — multiple messages work reliably\n- Dual NVIDIA API key auto-rotation on rate limit (429)\n- 295 tests passing, 0 analyze errors"
+  "changelog": "v1.6.5 — Real DOCX Export, CloudEngine OpenAI Format, Pagination\n\n- Real .docx export (proper OOXML ZIP format, not RTF)\n- CloudEngine converted to OpenAI-compatible format (unified wire format)\n- Removed 404 models (DeepSeek V4 Flash, Nemotron 3 Ultra, GLM-5/5.1)\n- Conversation history pagination (20 per page with LOAD MORE)\n- 331 tests passing, 0 analyze errors"
 }

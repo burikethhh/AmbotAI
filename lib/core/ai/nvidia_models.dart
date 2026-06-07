@@ -28,24 +28,6 @@ class NvidiaModelCatalog {
 
   // ── NVIDIA NIM (build.nvidia.com) ──────────────────────────────────
 
-  static const deepseekV4Flash = NvidiaModel(
-    id: 'deepseek-ai/deepseek-v4-flash',
-    name: 'DeepSeek V4 Flash',
-    description: '284B MoE (13B active). Fast coding, 1M context.',
-    provider: NvidiaModelProvider.nvidia,
-    contextLength: 1_000_000,
-    maxTokens: 8192,
-  );
-
-  static const nemotron3Ultra = NvidiaModel(
-    id: 'nvidia/nemotron-3-ultra-550b-a55b',
-    name: 'Nemotron 3 Ultra',
-    description: '550B MoE (55B active). Best quality reasoning & coding.',
-    provider: NvidiaModelProvider.nvidia,
-    contextLength: 131072,
-    maxTokens: 8192,
-  );
-
   static const nemotron3Super = NvidiaModel(
     id: 'nvidia/nemotron-3-super-120b-a12b',
     name: 'Nemotron 3 Super',
@@ -100,35 +82,6 @@ class NvidiaModelCatalog {
     maxTokens: 4096,
   );
 
-  static const nemotronSafety = NvidiaModel(
-    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-    name: 'Nemotron 3 Nano Omni 30B',
-    description: 'Omni reasoning model. Content moderation & general reasoning.',
-    provider: NvidiaModelProvider.nvidia,
-    contextLength: 131072,
-    maxTokens: 4096,
-  );
-
-  // ── GLM via NVIDIA NIM ────────────────────────────────────────────
-
-  static const glm5 = NvidiaModel(
-    id: 'z-ai/glm5',
-    name: 'GLM-5',
-    description: 'Zhipu GLM-5. Strong multilingual chat & reasoning.',
-    provider: NvidiaModelProvider.nvidia,
-    contextLength: 131072,
-    maxTokens: 4096,
-  );
-
-  static const glm51 = NvidiaModel(
-    id: 'z-ai/glm5.1',
-    name: 'GLM-5.1',
-    description: 'GLM-5.1 updated. Strong multilingual & coding.',
-    provider: NvidiaModelProvider.nvidia,
-    contextLength: 131072,
-    maxTokens: 4096,
-  );
-
   // ── Kimi via OpenRouter ───────────────────────────────────────────
 
   static const kimiK2 = NvidiaModel(
@@ -151,13 +104,9 @@ class NvidiaModelCatalog {
 
   /// All available models for the Programmer role.
   static const List<NvidiaModel> programmerModels = [
-    deepseekV4Flash,
-    nemotron3Ultra,
     nemotron3Super,
     nemotronSuper49B,
     llama33_70b,
-    glm5,
-    glm51,
     kimiK2,
     kimiK26Free,
     nemotron3Nano,
@@ -168,12 +117,10 @@ class NvidiaModelCatalog {
     llama32Vision,
     llama33_70b,
     nemotron3Super,
-    nemotron3Ultra,
-    deepseekV4Flash,
   ];
 
   /// Content safety models.
   static const List<NvidiaModel> safetyModels = [
-    nemotronSafety,
+    nemotron3Nano,
   ];
 }
