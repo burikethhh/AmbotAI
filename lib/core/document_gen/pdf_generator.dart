@@ -308,7 +308,15 @@ class PdfGenerator {
     try {
       return (await getApplicationDocumentsDirectory()).path;
     } catch (_) {
-      return '/storage/emulated/0/Android/data/com.ambot.ambot_ai/files';
+      // Platform-specific fallbacks
+      if (Platform.isAndroid) {
+        return '/storage/emulated/0/Android/data/com.ambot.ambot_ai/files';
+      } else if (Platform.isWindows) {
+        return '${Platform.environment['USERPROFILE']}\\Documents';
+      } else if (Platform.isMacOS || Platform.isLinux) {
+        return '${Platform.environment['HOME']}/Documents';
+      }
+      return Directory.current.path;
     }
   }
 

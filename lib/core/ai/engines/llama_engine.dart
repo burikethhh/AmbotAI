@@ -61,12 +61,16 @@ class LlamaEngine implements AIEngine {
     final threads = _computeThreadCount();
     final threadsBatch = threads;
 
+    // Enable GPU layers on desktop (Metal on macOS, Vulkan on Linux/Windows)
+    final isDesktop = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final gpuLayers = isDesktop ? 99 : 0;
+
     return ld.ModelParams(
       contextSize: contextSize,
       batchSize: batchSize,
       numberOfThreads: threads,
       numberOfThreadsBatch: threadsBatch,
-      gpuLayers: 0,
+      gpuLayers: gpuLayers,
     );
   }
 
@@ -104,6 +108,14 @@ class LlamaEngine implements AIEngine {
   }
 
   int _computeContextSize(int ramMB) {
+    final isDesktop = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    if (isDesktop) {
+      // Desktop gets larger context windows
+      if (ramMB >= 32768) return 8192;
+      if (ramMB >= 16384) return 4096;
+      return 2048;
+    }
+    // Mobile context sizes
     if (ramMB >= 8192) return 4096;
     if (ramMB >= 6144) return 3072;
     if (ramMB >= 4096) return 2048;

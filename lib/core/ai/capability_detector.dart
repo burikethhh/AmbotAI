@@ -149,14 +149,41 @@ class DeviceCapabilityDetector {
 
   static Future<DeviceCapability> _desktopCapability() async {
     final freeStorageMB = await _getFreeStorage();
-    // Most desktops have plenty of RAM
+
+    // Detect actual RAM on desktop
+    int ramMB = 16384; // Default 16GB for desktop
+    try {
+      if (Platform.isWindows) {
+        final result = await Process.run('wmic', ['OS', 'get', 'TotalVisibleMemorySize', '/Value']);
+        if (result.exitCode == 0) {
+          final match = RegExp(r'TotalVisibleMemorySize=(\d+)').firstMatch(result.stdout.toString());
+          if (match != null) ramMB = int.parse(match.group(1)!) ~/ 1024;
+        }
+      } else if (Platform.isMacOS) {
+        final result = await Process.run('sysctl', ['-n', 'hw.memsize']);
+        if (result.exitCode == 0) ramMB = int.parse(result.stdout.toString().trim()) ~/ (1024 * 1024);
+      } else if (Platform.isLinux) {
+        final result = await Process.run('free', ['-m']);
+        if (result.exitCode == 0) {
+          final match = RegExp(r'^Mem:\s+(\d+)').firstMatch(result.stdout.toString());
+          if (match != null) ramMB = int.parse(match.group(1)!);
+        }
+      }
+    } catch (_) {}
+
+    final tier = ramMB >= 16384
+        ? DeviceTier.flagship
+        : ramMB >= 8192
+            ? DeviceTier.mid
+            : DeviceTier.lowEnd;
+
     return DeviceCapability(
-      ramMB: 8192,
+      ramMB: ramMB,
       freeStorageMB: freeStorageMB,
       chipset: Platform.operatingSystem,
       deviceModel: Platform.localHostname,
       hasGoogleAICore: false,
-      recommendedTier: DeviceTier.mid,
+      recommendedTier: tier,
     );
   }
 
