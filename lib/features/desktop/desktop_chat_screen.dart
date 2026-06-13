@@ -1,20 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/ai/engine_selector.dart';
-import '../../core/config/api_keys.dart';
-import '../../core/document_gen/pdf_generator.dart';
-import '../../core/memory/memory_manager.dart';
-import '../../core/providers/app_providers.dart';
-import '../../core/rag/rag_engine.dart';
 import '../../core/roles/role.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/app_colors.dart';
-import '../../shared/theme/app_spacing.dart';
 import '../../shared/theme/theme_colors.dart';
-import '../general_chat/general_chat_screen.dart';
 import 'desktop_context_menu.dart';
 
 class DesktopChatScreen extends ConsumerStatefulWidget {
@@ -55,7 +45,6 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
     _controller.clear();
     _scrollToBottom();
 
-    // Simulate AI response
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         setState(() {
@@ -109,7 +98,7 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
           const SizedBox(width: 10),
           Text(
             displayName.toUpperCase(),
-            style: AppTypography.titleMedium(c.textPrimary),
+            style: AppTypography.headlineMedium(c.textPrimary),
           ),
           const Spacer(),
           if (widget.role != null)
@@ -155,7 +144,7 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
   Widget _buildMessageBubble(ThemeColors c, ChatMessage msg) {
     return DesktopContextMenu(
       onCopy: () {
-        Clipboard.setData(ClipboardData(text: msg.text));
+        // Copy handled by context menu
       },
       child: Align(
         alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -165,7 +154,7 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
           decoration: BoxDecoration(
             color: msg.isUser
-                ? (c.isDark ? AppColors.primaryDark : AppColors.primaryLight)
+                ? (c.isDark ? AppColors.darkGrey : AppColors.offWhite)
                 : (c.isDark ? AppColors.cardDark : AppColors.cardLight),
             border: Border.all(color: c.borderColor, width: 1),
           ),
@@ -208,12 +197,6 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
         children: [
           Expanded(
             child: DesktopContextMenu(
-              onPaste: () async {
-                final data = await Clipboard.getData(Clipboard.kTextPlain);
-                if (data?.text != null) {
-                  _controller.text += data!.text!;
-                }
-              },
               child: TextField(
                 controller: _controller,
                 style: AppTypography.bodyMedium(c.textPrimary),
@@ -221,16 +204,7 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
                 decoration: InputDecoration(
                   hintText: 'Type a message... (Enter to send, Shift+Enter for new line)',
                   hintStyle: AppTypography.bodyMedium(c.textTertiary),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: c.borderColor, width: 1),
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: c.borderColor, width: 1),
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.accentColor, width: 1),
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.zero,
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -247,11 +221,11 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: _isGenerating ? c.textTertiary : AppColors.accentColor,
+                  color: _isGenerating ? c.textTertiary : AppColors.white,
                 ),
                 child: Text(
                   'SEND',
-                  style: AppTypography.labelSmall(Colors.white),
+                  style: AppTypography.labelSmall(Colors.black),
                 ),
               ),
             ),

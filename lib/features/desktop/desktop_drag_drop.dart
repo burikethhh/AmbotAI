@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class DesktopDragDropHandler extends StatefulWidget {
   final Widget child;
@@ -42,8 +40,8 @@ class _DesktopDragDropHandlerState extends State<DesktopDragDropHandler> {
             widget.child,
             if (_isDragging)
               Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.7),
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.7),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.all(32),
@@ -51,11 +49,11 @@ class _DesktopDragDropHandlerState extends State<DesktopDragDropHandler> {
                         border: Border.all(color: Colors.white, width: 2),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Column(
+                      child: const Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.upload_file, size: 48, color: Colors.white),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           Text(
                             'DROP FILE HERE',
                             style: TextStyle(
@@ -65,10 +63,10 @@ class _DesktopDragDropHandlerState extends State<DesktopDragDropHandler> {
                               letterSpacing: 2,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
                             'Images, documents, or text files',
-                            style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
                           ),
                         ],
                       ),

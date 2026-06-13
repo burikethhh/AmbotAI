@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ai/engine_selector.dart';
@@ -23,7 +22,6 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/settings/models_screen.dart';
 import '../../features/roles/roles_browser_screen.dart';
 import 'desktop_drag_drop.dart';
-import 'desktop_context_menu.dart';
 import 'desktop_status_bar.dart';
 
 class DesktopHomeScreen extends ConsumerStatefulWidget {
@@ -36,7 +34,6 @@ class DesktopHomeScreen extends ConsumerStatefulWidget {
 class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
   int _selectedIndex = 0;
   Role? _selectedRole;
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -102,7 +99,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
           backgroundColor: c.surfaceColor,
           body: Column(
             children: [
-              const DesktopUpdateBanner(),
               Expanded(
                 child: Row(
                   children: [
@@ -121,9 +117,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
   }
 
   void _handleFilesDropped(List<String> files) {
-    // Handle dropped files - switch to document gen or attach to chat
     setState(() {
-      _selectedIndex = 3; // Documents
+      _selectedIndex = 3;
       _selectedRole = null;
     });
   }
@@ -151,17 +146,17 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: subtitle == 'ERROR'
-                            ? Colors.red.withOpacity(0.2)
-                            : Colors.green.withOpacity(0.2),
+                            ? const Color(0x33FF4444)
+                            : const Color(0x334CAF50),
                         border: Border.all(
-                          color: subtitle == 'ERROR' ? Colors.red : Colors.green,
+                          color: subtitle == 'ERROR' ? AppColors.error : AppColors.success,
                           width: 1,
                         ),
                       ),
                       child: Text(
                         subtitle,
                         style: AppTypography.labelSmall(
-                          subtitle == 'ERROR' ? Colors.red : Colors.green,
+                          subtitle == 'ERROR' ? AppColors.error : AppColors.success,
                         ),
                       ),
                     ),

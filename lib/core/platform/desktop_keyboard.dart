@@ -38,50 +38,52 @@ class _DesktopKeyboardHandlerState extends State<DesktopKeyboardHandler> {
     super.dispose();
   }
 
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final isCtrl = HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyN) {
+      widget.onNewChat?.call();
+      return KeyEventResult.handled;
+    }
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyK) {
+      widget.onSearch?.call();
+      return KeyEventResult.handled;
+    }
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.comma) {
+      widget.onSettings?.call();
+      return KeyEventResult.handled;
+    }
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyD) {
+      widget.onToggleTheme?.call();
+      return KeyEventResult.handled;
+    }
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyS) {
+      widget.onSave?.call();
+      return KeyEventResult.handled;
+    }
+    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyE) {
+      widget.onExport?.call();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      widget.onEscape?.call();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
-      onKey: (node, event) {
-        if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-          return KeyEventResult.ignored;
-        }
-
-        final isCtrl = HardwareKeyboard.instance.isControlPressed ||
-            HardwareKeyboard.instance.isMetaPressed;
-
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyN) {
-          widget.onNewChat?.call();
-          return KeyEventResult.handled;
-        }
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyK) {
-          widget.onSearch?.call();
-          return KeyEventResult.handled;
-        }
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.comma) {
-          widget.onSettings?.call();
-          return KeyEventResult.handled;
-        }
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyD) {
-          widget.onToggleTheme?.call();
-          return KeyEventResult.handled;
-        }
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyS) {
-          widget.onSave?.call();
-          return KeyEventResult.handled;
-        }
-        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyE) {
-          widget.onExport?.call();
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.escape) {
-          widget.onEscape?.call();
-          return KeyEventResult.handled;
-        }
-
-        return KeyEventResult.ignored;
-      },
+      onKeyEvent: _handleKeyEvent,
       child: widget.child,
     );
   }
