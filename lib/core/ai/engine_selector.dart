@@ -131,9 +131,8 @@ class EngineSelector {
   }) async {
     // Try preferred provider first
     if (preferred == CloudProvider.nvidia && nvidiaKey != null) {
-      final keyManager = NvidiaKeyManager();
-      keyManager.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
-      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: keyManager);
+      NvidiaKeyManager.shared.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: NvidiaKeyManager.shared);
       await engine.initialize();
       return EngineSelection(
         engine: engine,
@@ -178,9 +177,8 @@ class EngineSelector {
 
     // Fall back to whichever key is available (priority: NVIDIA > OpenRouter > Gemini > Qwen)
     if (nvidiaKey != null) {
-      final keyManager = NvidiaKeyManager();
-      keyManager.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
-      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: keyManager);
+      NvidiaKeyManager.shared.setUserKeys(nvidiaKey, ApiKeys.nvidiaKey2);
+      final engine = OpenAIEngine.nvidia(apiKey: nvidiaKey, keyManager: NvidiaKeyManager.shared);
       await engine.initialize();
       return EngineSelection(
         engine: engine,

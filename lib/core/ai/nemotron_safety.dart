@@ -30,7 +30,7 @@ class SafetyVerdict {
 /// ```
 class NemotronSafetyService {
   final http.Client _client = http.Client();
-  final NvidiaKeyManager _keyManager = NvidiaKeyManager();
+  final NvidiaKeyManager _keyManager = NvidiaKeyManager.shared;
 
   static const String _baseUrl =
       'https://integrate.api.nvidia.com/v1/chat/completions';

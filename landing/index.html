@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="description" content="Ambot AI — Offline-First AI Classroom Assistant for Android. Chat, generate images and documents, all on-device.">
-  <title>Ambot AI — Offline-First AI Classroom Assistant</title>
+  <meta name="description" content="Ambot AI — Offline-First AI Super-App. Chat, generate images and documents, control your device, all on-device.">
+  <title>Ambot AI — Offline-First AI Super-App</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -98,6 +98,25 @@
     .card h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
     .card p { font-size: 13px; color: #888; }
 
+    /* Stats */
+    .stats {
+      padding: 60px 0;
+      border-bottom: 2px solid #222;
+    }
+    .stats h3 { font-size: 28px; font-weight: 700; margin-bottom: 32px; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    }
+    .stat-item {
+      border: 2px solid #222; padding: 24px; text-align: center;
+    }
+    .stat-item .number {
+      font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px;
+    }
+    .stat-item .label {
+      font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;
+    }
+
     /* Downloads */
     .downloads {
       padding: 60px 0;
@@ -153,7 +172,7 @@
     .entry ul li {
       font-size: 13px; color: #aaa; padding: 3px 0;
     }
-    .entry ul li::before { content: '— '; color: #555; }
+    .entry ul li::before { content: '\2014 '; color: #555; }
 
     /* Footer */
     footer {
@@ -176,7 +195,8 @@
       .container { padding: 0 20px; }
       .hero h2 { font-size: 38px; }
       .hero p { font-size: 16px; }
-      .features h3, .downloads h3, .changelog h3 { font-size: 24px; }
+      .features h3, .stats h3, .downloads h3, .changelog h3 { font-size: 24px; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     /* Mobile (640px and below) */
@@ -196,9 +216,14 @@
       .hero .actions .btn { width: 100%; }
 
       .features { padding: 40px 0; }
-      .features h3, .downloads h3, .changelog h3 { font-size: 22px; margin-bottom: 24px; }
+      .features h3, .stats h3, .downloads h3, .changelog h3 { font-size: 22px; margin-bottom: 24px; }
       .grid { grid-template-columns: 1fr; gap: 12px; }
       .card { padding: 20px; }
+
+      .stats { padding: 40px 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .stat-item { padding: 20px; }
+      .stat-item .number { font-size: 28px; }
 
       .downloads { padding: 40px 0; }
       .version-card { flex-direction: column; align-items: stretch; gap: 14px; }
@@ -232,6 +257,7 @@
       <h1>AMBOT AI</h1>
       <nav>
         <a href="#features">Features</a>
+        <a href="#stats">Stats</a>
         <a href="#downloads">Download</a>
         <a href="#updates">Updates</a>
       </nav>
@@ -240,15 +266,16 @@
 
   <section class="hero">
     <div class="container">
-      <h2>Offline AI<br>for the Classroom.</h2>
-      <p>Ambot AI runs entirely on-device with optional cloud fallback. Chat with AI role personas, generate images and documents, and get answers — no internet required.</p>
+      <h2>Offline AI.<br>For Everyone.</h2>
+      <p>Ambot AI runs entirely on-device with optional cloud fallback. Chat with 42 specialized AI role personas, generate images and documents, control your device with voice commands -- no internet required.</p>
       <div class="tags">
         <span>Android</span>
         <span>Flutter</span>
+        <span>42 AI Roles</span>
         <span>NVIDIA NIM</span>
         <span>Llama 3.2</span>
         <span>Offline-first</span>
-        <span>Open Source</span>
+        <span>100% Private</span>
       </div>
       <div class="actions">
         <a href="/api/download" class="btn" rel="noopener">Download APK</a>
@@ -268,7 +295,7 @@
             </svg>
           </div>
           <h4>General Chat</h4>
-          <p>Ask Ambot anything — get instant answers using on-device AI or cloud NVIDIA LLMs.</p>
+          <p>Ask anything -- get instant answers using on-device AI or cloud NVIDIA LLMs. Supports image and file attachments.</p>
         </div>
         <div class="card">
           <div class="icon-box">
@@ -276,8 +303,8 @@
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <h4>AI Role Personas</h4>
-          <p>Install specialized teacher, tutor, and assistant roles. Each with custom prompts and memory.</p>
+          <h4>42 AI Role Personas</h4>
+          <p>Tutors, teachers, farmers, doctors, lawyers, creatives -- each with custom prompts and long-term memory.</p>
         </div>
         <div class="card">
           <div class="icon-box">
@@ -303,8 +330,26 @@
               <polygon points="11 5 6 9 2 8 14 2 18 6 15 11 10 21 8 17"/><path d="M15 9l-6 6"/>
             </svg>
           </div>
-          <h4>Text-to-Speech</h4>
-          <p>Listen to any text with AI-enhanced prosody and emotion detection. Offline Piper TTS support.</p>
+          <h4>Voice & TTS</h4>
+          <p>Speak to Ambot and listen to responses. Offline Piper TTS support with multiple voices.</p>
+        </div>
+        <div class="card">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 17l6-6-6-6"/><path d="M12 19h8"/>
+            </svg>
+          </div>
+          <h4>Programmer Mode</h4>
+          <p>Interactive HTML/CSS/JS editor with live preview and AI tutor. Learn to code offline.</p>
+        </div>
+        <div class="card">
+          <div class="icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h4>Device Control</h4>
+          <p>Control your Android device with voice commands. Launch apps, toggle settings, automate tasks.</p>
         </div>
         <div class="card">
           <div class="icon-box">
@@ -319,14 +364,39 @@
     </div>
   </section>
 
+  <section class="stats" id="stats">
+    <div class="container">
+      <h3>Built for Scale</h3>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="number">42</div>
+          <div class="label">AI Roles</div>
+        </div>
+        <div class="stat-item">
+          <div class="number">11</div>
+          <div class="label">Domains</div>
+        </div>
+        <div class="stat-item">
+          <div class="number">4</div>
+          <div class="label">Cloud Providers</div>
+        </div>
+        <div class="stat-item">
+          <div class="number">331</div>
+          <div class="label">Tests Passing</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="downloads" id="downloads">
     <div class="container">
       <h3>Download</h3>
       <p class="subtitle">Requires Android 8+ (API 26). ARM64 devices with 6+ GB RAM recommended for local AI models.</p>
+      <div id="download-count" style="margin-bottom: 20px; font-size: 13px; color: #888;"></div>
       <div class="version-card">
         <div class="info">
-          <h4>v1.6.5 <span class="badge">latest</span></h4>
-          <p>Real DOCX export, CloudEngine unified format, history pagination</p>
+          <h4>v1.6.6 <span class="badge">latest</span></h4>
+          <p>Security hardening, code quality fixes, proper README documentation</p>
           <div class="meta">
             <span>~223 MB</span>
             <span>APK</span>
@@ -337,15 +407,15 @@
       </div>
       <div class="version-card">
         <div class="info">
-          <h4>v1.6.4 <span class="badge">release</span></h4>
-          <p>Personal Butler mode, Restricted settings guide, 400 error fix</p>
+          <h4>v1.6.5 <span class="badge">stable</span></h4>
+          <p>Real DOCX export, CloudEngine unified format, history pagination</p>
           <div class="meta">
             <span>~223 MB</span>
             <span>APK</span>
             <span>Universal</span>
           </div>
         </div>
-        <a href="https://github.com/burikethhh/AmbotAI/releases/download/v1.3.3/Ambot-AI-v1.3.3-release.apk" class="dl-btn" rel="noopener">Download</a>
+        <a href="https://github.com/burikethhh/AmbotAI/releases/download/v1.6.5/AmbotAI-v1.6.5.apk" class="dl-btn" rel="noopener">Download</a>
       </div>
     </div>
   </section>
@@ -355,23 +425,35 @@
       <h3>Updates</h3>
 
       <div class="entry">
+        <div class="date">June 13, 2026</div>
+        <h4>v1.6.6 -- Security Hardening & Code Quality</h4>
+        <ul>
+          <li>Removed hardcoded API keys from source code -- keys now require build-time injection or user input</li>
+          <li>Fixed NvidiaKeyManager singleton pattern -- shared instance prevents duplicate state</li>
+          <li>Fixed inconsistent indentation in main.dart</li>
+          <li>Updated README.md with comprehensive project documentation</li>
+          <li>Landing page updated with expanded feature set and statistics</li>
+        </ul>
+      </div>
+
+      <div class="entry">
         <div class="date">June 7, 2026</div>
-        <h4>v1.6.5 — Real DOCX Export, CloudEngine OpenAI Format, Pagination</h4>
+        <h4>v1.6.5 -- Real DOCX Export, CloudEngine OpenAI Format, Pagination</h4>
         <ul>
           <li>Real .docx export (proper OOXML ZIP format, not RTF masquerading)</li>
-          <li>CloudEngine converted to OpenAI-compatible format — both engines share unified wire format</li>
+          <li>CloudEngine converted to OpenAI-compatible format -- both engines share unified wire format</li>
           <li>Removed 404 models (DeepSeek V4 Flash, Nemotron 3 Ultra, GLM-5/5.1)</li>
-          <li>Conversation history pagination — 20 per page with LOAD MORE on scroll</li>
+          <li>Conversation history pagination -- 20 per page with LOAD MORE on scroll</li>
           <li>331 tests passing, 0 analyze errors</li>
         </ul>
       </div>
 
       <div class="entry">
         <div class="date">June 6, 2026</div>
-        <h4>v1.6.4 — SSE Streaming Fix &amp; Multi-Message Reliability</h4>
+        <h4>v1.6.4 -- SSE Streaming Fix & Multi-Message Reliability</h4>
         <ul>
           <li>Fixed "Stream has already been listened to" error on 2nd+ chat messages</li>
-          <li>OpenAIEngine now creates fresh HTTP connection per SSE stream — multiple messages work reliably</li>
+          <li>OpenAIEngine now creates fresh HTTP connection per SSE stream -- multiple messages work reliably</li>
           <li>Dual NVIDIA API key auto-rotation on rate limit (429)</li>
           <li>295 tests passing, 0 analyze errors</li>
         </ul>
@@ -379,171 +461,35 @@
 
       <div class="entry">
         <div class="date">June 6, 2026</div>
-        <h4>v1.6.2 — Dual Key Auto-Rotation</h4>
+        <h4>v1.6.2 -- Dual Key Auto-Rotation</h4>
         <ul>
           <li>Main chat engine now auto-rotates between both built-in NVIDIA API keys on 429 rate limit</li>
-          <li>OpenAIEngine uses NvidiaKeyManager — seamless key swap without user interruption</li>
+          <li>OpenAIEngine uses NvidiaKeyManager -- seamless key swap without user interruption</li>
           <li>No more "Cloud AI service error" when one key is rate limited</li>
         </ul>
       </div>
 
       <div class="entry">
         <div class="date">June 6, 2026</div>
-        <h4>v1.6.1 — Softer Safety Moderation</h4>
+        <h4>v1.6.1 -- Softer Safety Moderation</h4>
         <ul>
           <li>Swapped Nemotron safety model from Content Safety 4B to Nemotron 3 Nano Omni 30B reasoning model</li>
-          <li>Relaxed moderation prompt — only flags hate speech, threats, self-harm, illegal activity</li>
+          <li>Relaxed moderation prompt -- only flags hate speech, threats, self-harm, illegal activity</li>
           <li>Tolerant of mild language, opinions, roleplay, educational topics, jokes</li>
         </ul>
       </div>
 
       <div class="entry">
         <div class="date">June 6, 2026</div>
-        <h4>v1.6.0 — Responsive Layout &amp; Chat Polish</h4>
+        <h4>v1.6.0 -- Responsive Layout & Chat Polish</h4>
         <ul>
-          <li>Responsive grid layout — adapts from 1 to 4 columns based on screen width</li>
-          <li>Chat input bar rewritten — 5 attachment icons collapsed into single [+] expand button</li>
+          <li>Responsive grid layout -- adapts from 1 to 4 columns based on screen width</li>
+          <li>Chat input bar rewritten -- 5 attachment icons collapsed into single [+] expand button</li>
           <li>General Chat AI responses now render MarkdownBody instead of plain Text</li>
-          <li>Chat bubble widths clamped to 200–700px preventing unreachably wide bubbles on tablets</li>
+          <li>Chat bubble widths clamped to 200-700px preventing unreachably wide bubbles on tablets</li>
           <li>Drawer scrolling fix, role card truncation fix, reduced padding/icons</li>
           <li>Nemotron safety check wired into both chat screens</li>
-          <li>Fixed landing page download URL — corrected asset name to match GitHub release filename</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 6, 2026</div>
-        <h4>v1.5.0 — AI Model Catalog &amp; Safety</h4>
-        <ul>
-          <li>NVIDIA NIM model catalog — DeepSeek V4 Flash, Nemotron 3 Ultra/Super/Nano, GLM-5/5.1, Kimi K2/K2.6, Llama 3.2 11B Vision</li>
-          <li>Programmer model selector — dropdown with 10 coding models, auto-fallback on failure</li>
-          <li>General Chat upgraded to Llama 3.2 11B Vision multimodal model</li>
-          <li>Nemotron Content Safety — non-blocking safety check on every AI response</li>
-          <li>Attachment bugs fixed — ordering, try-catch, 429 infinite loop, hardcoded MIME type</li>
-          <li>Responsive grid layout — adapts from 1 to 4 columns based on screen width</li>
-          <li>Drawer scrolling fix, role card truncation fix, input bar collapse</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 5, 2026</div>
-        <h4>v1.3.4 — Flashlight &amp; DND Real Toggle</h4>
-        <ul>
-          <li>Flashlight toggle now uses CameraManager.setTorchMode() to actually turn flashlight on/off</li>
-          <li>DND toggle now uses NotificationManager.setInterruptionFilter() to actually enable/disable DND</li>
-          <li>CAMERA and ACCESS_NOTIFICATION_POLICY permissions added for direct toggle control</li>
-          <li>Graceful handling when permissions not yet granted — guides user to settings</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 5, 2026</div>
-        <h4>v1.3.3 — Personal Butler &amp; Setup Polish</h4>
-        <ul>
-          <li>Programmer 400 error fix — AI role correctly mapped for OpenAI API compatibility</li>
-          <li>Restricted settings instructions — guided Android 13+ accessibility setup</li>
-          <li>Personal Butler mode — diamond toggle switches to butler persona with quick action buttons</li>
-          <li>Butler quick actions — Set Alarm, Set Timer, Set Volume, Set Brightness, Toggle WiFi, Toggle Flashlight</li>
-          <li>Natural language commands — "wake me up at 7am", "silence my phone", "max volume", "mute"</li>
-          <li>Dialog pickers for alarm time, timer duration, and slider controls for volume/brightness</li>
-          <li>Enhanced NVIDIA LLM prompt with comprehensive action guide and natural language examples</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 5, 2026</div>
-        <h4>v1.3.2 — Programmer, Agent Environment &amp; General Chat</h4>
-        <ul>
-          <li>Programmer — interactive HTML/CSS/JS learning IDE with AI tutor</li>
-          <li>Agent Driven Environment — device control &amp; automation with scroll, go back, deep link</li>
-          <li>General Chat rewrite — voice input, image gen, file attachments, NVIDIA vision</li>
-          <li>Image save/share with Ambot AI branded watermark</li>
-          <li>50+ crash fixes from comprehensive codebase audit</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 4, 2026</div>
-        <h4>v1.3.0 — Image Save/Share, Chat Attachments &amp; Vision</h4>
-        <ul>
-          <li>Save generated images with Ambot AI branded watermark</li>
-          <li>Share images directly to other apps with watermark overlay</li>
-          <li>Edit generated images — modify prompt and regenerate</li>
-          <li>Attach images from gallery in chat for AI analysis</li>
-          <li>Attach documents in chat for AI analysis (text files)</li>
-          <li>NVIDIA vision support — AI can describe and analyze attached images</li>
-          <li>Document reading with AI-powered summary and analysis</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 4, 2026</div>
-        <h4>v1.2.1 — Image Limit Increased</h4>
-        <ul>
-          <li>Daily image generation limit raised from 3 to 10 per user</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 3, 2026</div>
-        <h4>v1.2.0 — Social Links &amp; Landing Page Polish</h4>
-        <ul>
-          <li>Facebook and Instagram social links added to landing page footer</li>
-          <li>Developer: Christian Keth Aguacito</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 2, 2026</div>
-        <h4>v1.1.0 — Smart Error Handling &amp; User Guide</h4>
-        <ul>
-          <li>Private download counter with token-protected stats endpoint</li>
-          <li>Clear instructions shown when offline with no downloaded model</li>
-          <li>Model Required dialog now explains both Cloud AI and Local Model options</li>
-          <li>New "HOW IT WORKS" guide in Settings explaining Cloud AI vs Local AI modes</li>
-          <li>Better error messages in Chat and Image Generation when cloud AI is unreachable</li>
-          <li>General Chat detects offline+no-model state and shows actionable options</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 1, 2026</div>
-        <h4>v1.0.2 — First Release Build</h4>
-        <ul>
-          <li>Release variant APK (minified, shrunk, signed)</li>
-          <li>Smaller download size compared to debug builds</li>
-          <li>All v1.0.1 features included</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 1, 2026</div>
-        <h4>v1.0.1 — UI Polish &amp; Auto-Update</h4>
-        <ul>
-          <li>Redesigned General Chat input bar (Gemini-style rounded pill, subtle elevation, paper-plane send icon)</li>
-          <li>Redesigned Image Generation input bar with the same polished style</li>
-          <li>Cleaner Image Generation gallery (removed double rectangle, plain icon)</li>
-          <li>Softer red quota banner with info icon in Image Generation</li>
-          <li>Cleaner Drawer header (removed stars SVG icon)</li>
-          <li>Improved hamburger menu trigger with a subtle border frame</li>
-          <li>Auto-update check on app launch — red badge on Settings icon + banner on home screen when a new version is available</li>
-        </ul>
-      </div>
-
-      <div class="entry">
-        <div class="date">June 1, 2026</div>
-        <h4>v1.0.0 — Initial Release</h4>
-        <ul>
-          <li>General chat with Ambot AI (NVIDIA LLM + local models)</li>
-          <li>AI role personas with installable system prompts</li>
-          <li>Cloud image generation via NVIDIA FLUX.1-schnell + FLUX.2-klein-4b</li>
-          <li>Parallel model execution — both NVIDIA models run simultaneously, first success wins</li>
-          <li>LLM prompt enhancer for better image generation results</li>
-          <li>Document generation (study guides, quizzes, flashcards, summaries, lesson plans)</li>
-          <li>PDF and DOCX export for generated documents</li>
-          <li>Text-to-speech with AI preprocessing and emotion detection</li>
-          <li>On-device memory system with scope-based retrieval</li>
-          <li>Brutalist monochrome UI design with dark and light theme support</li>
+          <li>Fixed landing page download URL -- corrected asset name to match GitHub release filename</li>
         </ul>
       </div>
     </div>
@@ -551,7 +497,7 @@
 
   <footer>
     <div class="container">
-      <p>Built by <a href="https://github.com/burikethhh">Christian Keth Aguacito</a> &middot; Ambot AI &mdash; Offline-First AI Classroom Assistant</p>
+      <p>Built by <a href="https://github.com/burikethhh">Christian Keth Aguacito</a> &middot; Ambot AI &mdash; Offline-First AI Super-App</p>
       <div class="social-links">
         <a href="https://facebook.com/christiankethzink" target="_blank" rel="noopener" class="social-icon" aria-label="Facebook">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#f0f0f0">
@@ -568,5 +514,18 @@
       </div>
     </div>
   </footer>
+  <script>
+    // Display download count from public GitHub API
+    fetch('https://api.github.com/gists/d9936181f4ec00b1e06b8a2fcb169cdc')
+      .then(r => r.json())
+      .then(gist => {
+        const data = JSON.parse(gist.files['counter.json'].content);
+        const el = document.getElementById('download-count');
+        if (el && data.count) {
+          el.textContent = data.count.toLocaleString() + ' downloads and counting';
+        }
+      })
+      .catch(() => {});
+  </script>
 </body>
 </html>

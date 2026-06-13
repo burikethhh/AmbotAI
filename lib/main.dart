@@ -26,12 +26,12 @@ void main() async {
       return true;
     };
 
-    await Hive.initFlutter();
-  await MemoryService.instance.init();
-  await ConversationSummaryStore.instance.init();
-  await ActionLog.instance.init();
-  await ConversationStore.instance.init();
-  await ProgrammerStore.instance.init();
+      await Hive.initFlutter();
+    await MemoryService.instance.init();
+    await ConversationSummaryStore.instance.init();
+    await ActionLog.instance.init();
+    await ConversationStore.instance.init();
+    await ProgrammerStore.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

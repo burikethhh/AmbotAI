@@ -7,7 +7,7 @@ import 'nvidia_key_manager.dart';
 
 class NvidiaVisionService {
   final http.Client _client = http.Client();
-  final NvidiaKeyManager _keyManager = NvidiaKeyManager();
+  final NvidiaKeyManager _keyManager = NvidiaKeyManager.shared;
 
   void setApiKeys(String key1, String? key2) {
     _keyManager.setUserKeys(key1, key2);

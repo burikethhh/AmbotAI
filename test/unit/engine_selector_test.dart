@@ -89,7 +89,7 @@ void main() {
         expect(selection.cloudProvider, CloudProvider.qwen);
       });
 
-      test('falls back to cloud NVIDIA when built-in keys exist', () async {
+      test('falls back to cloud NVIDIA when user NVIDIA key is provided', () async {
         final selection = await EngineSelector.select(
           capability: const DeviceCapability(
             ramMB: 2048,
@@ -100,8 +100,9 @@ void main() {
             recommendedTier: DeviceTier.lowEnd,
           ),
           modelState: const ModelState(),
+          userNvidiaKey: 'test-nvidia-key',
         );
-        // Built-in NVIDIA keys exist, so cloud is preferred
+        // User NVIDIA key provided, so cloud is preferred
         expect(selection.mode, EngineMode.cloud);
         expect(selection.cloudProvider, CloudProvider.nvidia);
       });
@@ -126,7 +127,7 @@ void main() {
         expect(selection.cloudProvider, CloudProvider.gemini);
       });
 
-      test('falls back to NVIDIA when OpenRouter preferred but no OpenRouter key', () async {
+      test('falls back to Gemini when OpenRouter preferred but no OpenRouter key', () async {
         final selection = await EngineSelector.select(
           capability: const DeviceCapability(
             ramMB: 4096,
@@ -141,8 +142,8 @@ void main() {
           preferredCloudProvider: CloudProvider.openRouter,
         );
         expect(selection.mode, EngineMode.cloud);
-        // Falls back to NVIDIA first (built-in keys exist) before Gemini
-        expect(selection.cloudProvider, CloudProvider.nvidia);
+        // Falls back to Gemini since no NVIDIA or OpenRouter keys available
+        expect(selection.cloudProvider, CloudProvider.gemini);
         expect(selection.reason, contains('fallback'));
       });
     });

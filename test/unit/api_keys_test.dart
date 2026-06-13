@@ -3,8 +3,8 @@ import 'package:ambot_ai/core/config/api_keys.dart';
 
 void main() {
   group('ApiKeys (using fromEnvironment defaults)', () {
-    test('hasNvidia returns true when built-in defaults exist', () {
-      expect(ApiKeys.hasNvidia, isTrue);
+    test('hasNvidia returns false when no keys defined', () {
+      expect(ApiKeys.hasNvidia, isFalse);
     });
 
     test('hasGemini returns false when GEMINI_KEY not defined', () {
@@ -28,6 +28,8 @@ void main() {
       expect(ApiKeys.openRouterKey, isEmpty);
       expect(ApiKeys.qwenKey, isEmpty);
       expect(ApiKeys.huggingFaceToken, isEmpty);
+      expect(ApiKeys.nvidiaKey1, isEmpty);
+      expect(ApiKeys.nvidiaKey2, isEmpty);
     });
   });
 }

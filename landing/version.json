@@ -1,7 +1,7 @@
 {
-  "version": "1.6.5",
-  "build": 20,
-  "releaseDate": "2026-06-07",
+  "version": "1.6.6",
+  "build": 21,
+  "releaseDate": "2026-06-13",
   "updateUrl": "https://ambot-ai.vercel.app/api/download",
-  "changelog": "v1.6.5 — Real DOCX Export, CloudEngine OpenAI Format, Pagination\n\n- Real .docx export (proper OOXML ZIP format, not RTF)\n- CloudEngine converted to OpenAI-compatible format (unified wire format)\n- Removed 404 models (DeepSeek V4 Flash, Nemotron 3 Ultra, GLM-5/5.1)\n- Conversation history pagination (20 per page with LOAD MORE)\n- 331 tests passing, 0 analyze errors"
+  "changelog": "v1.6.6 — Security Hardening & Code Quality\n\n- Removed hardcoded API keys from source code\n- Fixed NvidiaKeyManager singleton pattern\n- Fixed inconsistent indentation in main.dart\n- Updated README.md with comprehensive documentation\n- Landing page updated with expanded feature set"
 }

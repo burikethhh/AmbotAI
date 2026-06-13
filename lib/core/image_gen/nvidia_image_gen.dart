@@ -11,7 +11,7 @@ import '../storage/output_storage_service.dart';
 class NvidiaImageGenEngine implements ImageGenEngine {
   bool _isReady = false;
   final http.Client _client = http.Client();
-  final NvidiaKeyManager _keyManager = NvidiaKeyManager();
+  final NvidiaKeyManager _keyManager = NvidiaKeyManager.shared;
 
   /// Each model has its own endpoint on ai.api.nvidia.com.
   /// https://ai.api.nvidia.com/v1/genai/{owner}/{name}

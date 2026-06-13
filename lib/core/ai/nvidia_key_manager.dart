@@ -5,6 +5,10 @@ import '../config/api_keys.dart';
 /// Priority: user override > compile-time default > null.
 /// On 429: primary → secondary → error.
 class NvidiaKeyManager {
+  static final NvidiaKeyManager shared = NvidiaKeyManager._();
+
+  NvidiaKeyManager._();
+
   String? _userKey1;
   String? _userKey2;
   bool _usingSecondary = false;
