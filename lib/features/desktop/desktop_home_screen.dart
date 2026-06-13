@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ai/engine_selector.dart';
+import '../../core/platform/platform_guard.dart';
+import '../../core/platform/desktop_keyboard.dart';
+import '../../core/platform/window_manager.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/roles/role.dart';
 import '../../shared/theme/app_typography.dart';
@@ -18,6 +22,9 @@ import '../../features/memory/memory_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/models_screen.dart';
 import '../../features/roles/roles_browser_screen.dart';
+import 'desktop_drag_drop.dart';
+import 'desktop_context_menu.dart';
+import 'desktop_status_bar.dart';
 
 class DesktopHomeScreen extends ConsumerStatefulWidget {
   const DesktopHomeScreen({super.key});
@@ -29,6 +36,41 @@ class DesktopHomeScreen extends ConsumerStatefulWidget {
 class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
   int _selectedIndex = 0;
   Role? _selectedRole;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initWindow();
+    });
+  }
+
+  Future<void> _initWindow() async {
+    if (PlatformGuard.isWindows || PlatformGuard.isMacOS || PlatformGuard.isLinux) {
+      await DesktopWindowManager.setMinimumSize(900, 600);
+      await DesktopWindowManager.centerWindow();
+      await DesktopWindowManager.setTitle('Ambot AI - Desktop');
+    }
+  }
+
+  void _handleNewChat() {
+    setState(() {
+      _selectedIndex = 0;
+      _selectedRole = null;
+    });
+  }
+
+  void _handleSearch() {
+    // TODO: Implement search modal
+  }
+
+  void _handleSettings() {
+    setState(() {
+      _selectedIndex = 8;
+      _selectedRole = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +81,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
       data: (s) {
         switch (s.mode) {
           case EngineMode.local:
-            return 'OFFLINE AI';
+            return 'LOCAL';
           case EngineMode.cloud:
-            return 'CLOUD (${s.cloudProvider?.name.toUpperCase() ?? "AI"})';
+            return s.cloudProvider?.name.toUpperCase() ?? 'CLOUD';
           case EngineMode.mock:
             return 'DEMO';
         }
@@ -50,16 +92,40 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
       error: (e, _) => 'ERROR',
     );
 
-    return Scaffold(
-      backgroundColor: c.surfaceColor,
-      body: Row(
-        children: [
-          _buildSidebar(c, subtitle),
-          Container(width: 1, color: c.borderColor),
-          Expanded(child: _buildContent()),
-        ],
+    return DesktopKeyboardHandler(
+      onNewChat: _handleNewChat,
+      onSearch: _handleSearch,
+      onSettings: _handleSettings,
+      child: DesktopDragDropHandler(
+        onFilesDropped: _handleFilesDropped,
+        child: Scaffold(
+          backgroundColor: c.surfaceColor,
+          body: Column(
+            children: [
+              const DesktopUpdateBanner(),
+              Expanded(
+                child: Row(
+                  children: [
+                    _buildSidebar(c, subtitle),
+                    Container(width: 1, color: c.borderColor),
+                    Expanded(child: _buildContent()),
+                  ],
+                ),
+              ),
+              const DesktopStatusBar(),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  void _handleFilesDropped(List<String> files) {
+    // Handle dropped files - switch to document gen or attach to chat
+    setState(() {
+      _selectedIndex = 3; // Documents
+      _selectedRole = null;
+    });
   }
 
   Widget _buildSidebar(ThemeColors c, String subtitle) {
@@ -77,9 +143,32 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AMBOT AI', style: AppTypography.headlineMedium(c.textPrimary)),
-                const SizedBox(height: 2),
-                Text('DESKTOP  $subtitle', style: AppTypography.labelSmall(c.textTertiary)),
+                Row(
+                  children: [
+                    Text('AMBOT', style: AppTypography.headlineMedium(c.textPrimary)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: subtitle == 'ERROR'
+                            ? Colors.red.withOpacity(0.2)
+                            : Colors.green.withOpacity(0.2),
+                        border: Border.all(
+                          color: subtitle == 'ERROR' ? Colors.red : Colors.green,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        subtitle,
+                        style: AppTypography.labelSmall(
+                          subtitle == 'ERROR' ? Colors.red : Colors.green,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('DESKTOP v1.6.6', style: AppTypography.labelSmall(c.textTertiary)),
               ],
             ),
           ),
@@ -87,15 +176,63 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
             child: ListView(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               children: [
-                _SidebarItem(icon: Icons.chat_outlined, label: 'General Chat', isSelected: _selectedIndex == 0, onTap: () => setState(() { _selectedIndex = 0; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.forum_outlined, label: 'Role Chat', isSelected: _selectedIndex == 1, onTap: () => setState(() => _selectedIndex = 1)),
-                _SidebarItem(icon: Icons.image_outlined, label: 'Image Gen', isSelected: _selectedIndex == 2, onTap: () => setState(() { _selectedIndex = 2; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.description_outlined, label: 'Documents', isSelected: _selectedIndex == 3, onTap: () => setState(() { _selectedIndex = 3; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.code_outlined, label: 'Programmer', isSelected: _selectedIndex == 4, onTap: () => setState(() { _selectedIndex = 4; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.apps_outlined, label: 'All Roles', isSelected: _selectedIndex == 5, onTap: () => setState(() { _selectedIndex = 5; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.storage_outlined, label: 'Models', isSelected: _selectedIndex == 6, onTap: () => setState(() { _selectedIndex = 6; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.memory_outlined, label: 'Memory', isSelected: _selectedIndex == 7, onTap: () => setState(() { _selectedIndex = 7; _selectedRole = null; })),
-                _SidebarItem(icon: Icons.settings_outlined, label: 'Settings', isSelected: _selectedIndex == 8, onTap: () => setState(() { _selectedIndex = 8; _selectedRole = null; })),
+                _SidebarItem(
+                  icon: Icons.chat_outlined,
+                  label: 'General Chat',
+                  shortcut: 'Ctrl+N',
+                  isSelected: _selectedIndex == 0,
+                  onTap: () => setState(() { _selectedIndex = 0; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.forum_outlined,
+                  label: 'Role Chat',
+                  isSelected: _selectedIndex == 1,
+                  onTap: () => setState(() => _selectedIndex = 1),
+                ),
+                _SidebarItem(
+                  icon: Icons.image_outlined,
+                  label: 'Image Gen',
+                  isSelected: _selectedIndex == 2,
+                  onTap: () => setState(() { _selectedIndex = 2; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.description_outlined,
+                  label: 'Documents',
+                  isSelected: _selectedIndex == 3,
+                  onTap: () => setState(() { _selectedIndex = 3; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.code_outlined,
+                  label: 'Programmer',
+                  isSelected: _selectedIndex == 4,
+                  onTap: () => setState(() { _selectedIndex = 4; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.apps_outlined,
+                  label: 'All Roles',
+                  isSelected: _selectedIndex == 5,
+                  onTap: () => setState(() { _selectedIndex = 5; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.storage_outlined,
+                  label: 'Models',
+                  shortcut: 'Ctrl+M',
+                  isSelected: _selectedIndex == 6,
+                  onTap: () => setState(() { _selectedIndex = 6; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.memory_outlined,
+                  label: 'Memory',
+                  isSelected: _selectedIndex == 7,
+                  onTap: () => setState(() { _selectedIndex = 7; _selectedRole = null; }),
+                ),
+                _SidebarItem(
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  shortcut: 'Ctrl+,',
+                  isSelected: _selectedIndex == 8,
+                  onTap: () => setState(() { _selectedIndex = 8; _selectedRole = null; }),
+                ),
               ],
             ),
           ),
@@ -105,11 +242,17 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: c.borderColor, width: 2)),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Icon(Icons.circle, size: 6, color: c.textTertiary),
-                const SizedBox(width: 6),
-                Text('ALL LOCAL', style: AppTypography.labelSmall(c.textTertiary)),
+                Row(
+                  children: [
+                    Icon(Icons.circle, size: 6, color: c.textTertiary),
+                    const SizedBox(width: 6),
+                    Text(Platform.operatingSystem.toUpperCase(), style: AppTypography.labelSmall(c.textTertiary)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Ctrl+N: New  Ctrl+K: Search  Ctrl+,: Settings', style: AppTypography.labelSmall(c.textTertiary)),
               ],
             ),
           ),
@@ -154,12 +297,14 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
 class _SidebarItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? shortcut;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
+    this.shortcut,
     required this.isSelected,
     required this.onTap,
   });
@@ -178,7 +323,17 @@ class _SidebarItem extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: isSelected ? c.textPrimary : c.textSecondary),
               const SizedBox(width: 12),
-              Text(label.toUpperCase(), style: AppTypography.bodyMedium(isSelected ? c.textPrimary : c.textSecondary)),
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  style: AppTypography.bodyMedium(isSelected ? c.textPrimary : c.textSecondary),
+                ),
+              ),
+              if (shortcut != null)
+                Text(
+                  shortcut!,
+                  style: AppTypography.labelSmall(c.textTertiary),
+                ),
             ],
           ),
         ),
@@ -201,9 +356,11 @@ class _RolePicker extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Icon(Icons.forum_outlined, size: 48, color: c.textSecondary),
+          const SizedBox(height: 16),
           Text('SELECT A ROLE', style: AppTypography.headlineMedium(c.textPrimary)),
           const SizedBox(height: 8),
-          Text('Choose a role persona to start chatting', style: AppTypography.bodyMedium(c.textSecondary)),
+          Text('Choose a persona to start chatting', style: AppTypography.bodyMedium(c.textSecondary)),
           const SizedBox(height: 24),
           Wrap(
             spacing: 8,

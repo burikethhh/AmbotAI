@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/api_keys.dart';
 import 'core/memory/conversation_summary_store.dart';
 import 'core/memory/memory_service.dart';
+import 'core/platform/window_manager.dart';
 import 'core/providers/app_providers.dart';
 import 'core/services/conversation_store.dart';
 import 'features/programmer/programmer_store.dart';
@@ -30,6 +32,13 @@ void main() async {
     await ConversationSummaryStore.instance.init();
     await ConversationStore.instance.init();
     await ProgrammerStore.instance.init();
+
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      await DesktopWindowManager.initialize();
+      await DesktopWindowManager.setTitle('Ambot AI');
+      await DesktopWindowManager.setMinimumSize(900, 600);
+      await DesktopWindowManager.centerWindow();
+    }
 
     final container = ProviderContainer();
     await container.read(themeProvider.notifier).load();
