@@ -5,6 +5,7 @@ import 'core/ai/engine_selector.dart';
 import 'core/providers/app_providers.dart';
 import 'core/services/error_boundary.dart';
 import 'features/desktop/desktop_home_screen.dart';
+import 'features/desktop/panels/desktop_workspace.dart';
 import 'shared/theme/app_theme.dart';
 
 class AmbotDesktopApp extends ConsumerStatefulWidget {
@@ -16,6 +17,8 @@ class AmbotDesktopApp extends ConsumerStatefulWidget {
 
 class _AmbotDesktopAppState extends ConsumerState<AmbotDesktopApp>
     with WidgetsBindingObserver {
+  bool _useWorkspace = true;
+
   @override
   void initState() {
     super.initState();
@@ -58,7 +61,7 @@ class _AmbotDesktopAppState extends ConsumerState<AmbotDesktopApp>
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-        home: const DesktopHomeScreen(),
+        home: _useWorkspace ? const DesktopWorkspace() : const DesktopHomeScreen(),
       ),
     );
   }
