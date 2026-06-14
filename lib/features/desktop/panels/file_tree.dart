@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../desktop_colors.dart';
@@ -21,12 +20,14 @@ class FileTree extends StatefulWidget {
   final String rootPath;
   final String? selectedPath;
   final ValueChanged<String>? onFileSelected;
+  final ValueChanged<String>? onAddToContext;
 
   const FileTree({
     super.key,
     this.rootPath = '.',
     this.selectedPath,
     this.onFileSelected,
+    this.onAddToContext,
   });
 
   @override
@@ -38,7 +39,6 @@ class _FileTreeState extends State<FileTree> {
   final Set<String> _expandedDirs = {};
   bool _loading = true;
   String? _error;
-  StreamSubscription? _watcher;
 
   @override
   void initState() {
@@ -48,7 +48,6 @@ class _FileTreeState extends State<FileTree> {
 
   @override
   void dispose() {
-    _watcher?.cancel();
     super.dispose();
   }
 
@@ -90,7 +89,7 @@ class _FileTreeState extends State<FileTree> {
       });
       for (final entity in entities) {
         final name = entity.path.split(Platform.pathSeparator).last;
-        if (name.startsWith('.') || name == 'node_modules' || name == '.dart_tool' || name == 'build') continue;
+        if (name.startsWith('.') || name == 'node_modules' || name == '.dart_tool' || name == 'build' || name == 'vendor' || name == 'packages' || name == '__pycache__' || name == '.pub-cache') continue;
         items.add(FileTreeItem(
           name: name,
           path: entity.path,
@@ -115,7 +114,7 @@ class _FileTreeState extends State<FileTree> {
       });
       for (final entity in entities) {
         final name = entity.path.split(Platform.pathSeparator).last;
-        if (name.startsWith('.') || name == 'node_modules' || name == '.dart_tool' || name == 'build') continue;
+        if (name.startsWith('.') || name == 'node_modules' || name == '.dart_tool' || name == 'build' || name == 'vendor' || name == 'packages' || name == '__pycache__' || name == '.pub-cache') continue;
         items.add(FileTreeItem(
           name: name,
           path: entity.path,
@@ -217,6 +216,7 @@ class _FileTreeState extends State<FileTree> {
 
     return GestureDetector(
       onTap: () => widget.onFileSelected?.call(item.path),
+      onSecondaryTap: widget.onAddToContext != null ? () => widget.onAddToContext!(item.path) : null,
       child: Container(
         padding: EdgeInsets.only(
           left: 28.0 + depth * 16,

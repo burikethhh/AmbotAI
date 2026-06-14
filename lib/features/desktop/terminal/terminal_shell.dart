@@ -125,6 +125,39 @@ class _TerminalShellState extends State<TerminalShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
+  void _completePath() {
+    final text = _inputController.text;
+    final lastSpace = text.lastIndexOf(' ');
+    final prefix = lastSpace >= 0 ? text.substring(lastSpace + 1) : text;
+    if (prefix.isEmpty) return;
+
+    try {
+      final cwd = Directory.current;
+      final entities = cwd.listSync();
+      final matches = entities
+          .where((e) {
+            final name = e.path.split(Platform.pathSeparator).last;
+            return name.startsWith(prefix) && !name.startsWith('.');
+          })
+          .map((e) => e.path.split(Platform.pathSeparator).last)
+          .take(10)
+          .toList();
+
+      if (matches.length == 1) {
+        final completion = matches[0];
+        final newText = lastSpace >= 0 ? '${text.substring(0, lastSpace + 1)}$completion' : completion;
+        _inputController.text = newText;
+        _inputController.selection = TextSelection.collapsed(offset: newText.length);
+      } else if (matches.length > 1) {
+        // Show matches in terminal
+        setState(() {
+          _lines.add(_TerminalLine('${matches.join('  ')}\n', _LineStyle.dim));
+          _lines.add(_TerminalLine('\$ $_inputController.text', _LineStyle.prompt));
+        });
+      }
+    } catch (_) {}
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -222,6 +255,8 @@ class _TerminalShellState extends State<TerminalShell> {
                       }
                       _inputController.selection = TextSelection.collapsed(offset: _inputController.text.length);
                     }
+                  } else if (event.logicalKey == LogicalKeyboardKey.tab) {
+                    _completePath();
                   }
                 }
               },

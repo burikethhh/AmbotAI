@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/app_version.dart';
 import '../ai/local_ai_manager.dart';
@@ -55,6 +56,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   HardwareInfo? _hardwareInfo;
   PerformanceMetrics? _latestMetrics;
   StreamSubscription<PerformanceMetrics>? _metricsSub;
+  StreamSubscription<DownloadProgress>? _downloadSub;
+  double? _downloadProgress;
 
   late final LocalAIManager _aiManager;
   late final AgentEngine _agentEngine;
@@ -101,6 +104,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     _aiManager.getHardwareInfo().then((h) {
       if (mounted) setState(() => _hardwareInfo = h);
     });
+    _downloadSub = _aiManager.downloadManager.progressStream.listen((p) {
+      if (mounted) setState(() => _downloadProgress = p.percent);
+    });
 
     _logs.add(AgentLogEntry(
       time: _timeNow(),
@@ -135,6 +141,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   void dispose() {
     _aiManager.removeListener(_onAiStateChanged);
     _metricsSub?.cancel();
+    _downloadSub?.cancel();
     _agentEngine.dispose();
     _aiManager.dispose();
     _permissionManager.dispose();
@@ -287,6 +294,16 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     });
   }
 
+  void _addFileToContext(String path) {
+    final name = path.split(Platform.pathSeparator).last;
+    setState(() {
+      _contextFiles.add(ContextFile(
+        path: path,
+        name: name,
+      ));
+    });
+  }
+
   String _timeNow() {
     final now = DateTime.now();
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -294,7 +311,13 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        _handleKeyEvent(event);
+        return KeyEventResult.handled;
+      },
+      child: Scaffold(
       backgroundColor: dcBg,
       body: Column(
         children: [
@@ -314,12 +337,18 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                     activity: _activeActivity,
                     selectedFile: _selectedFilePath,
                     onFileSelected: _onFileSelected,
+                    onAddToContext: _addFileToContext,
+                    modelName: _aiManager.currentModel?.name ?? 'none',
+                    gpuInfo: _hardwareInfo?.gpuSummary ?? 'CPU',
                   ),
                 if (!_focusMode && _activeActivity == ActivityType.files)
                   SidePanel(
                     activity: _activeActivity,
                     selectedFile: _selectedFilePath,
                     onFileSelected: _onFileSelected,
+                    onAddToContext: _addFileToContext,
+                    modelName: _aiManager.currentModel?.name ?? 'none',
+                    gpuInfo: _hardwareInfo?.gpuSummary ?? 'CPU',
                   ),
                 Expanded(
                   child: _focusMode
@@ -386,7 +415,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
               if (!_focusMode) _buildStatusBar(),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildEditorTabs() {
@@ -452,6 +482,33 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
         _activeFile = _openFiles.isNotEmpty ? _openFiles.last : null;
       }
     });
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final ctrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+      final shift = HardwareKeyboard.instance.isShiftPressed;
+
+      if (ctrl && !shift && event.logicalKey == LogicalKeyboardKey.backquote) {
+        setState(() => _terminalVisible = !_terminalVisible);
+        _saveLayout();
+      }
+      if (ctrl && shift && event.logicalKey == LogicalKeyboardKey.keyF) {
+        setState(() => _activeActivity = ActivityType.search);
+        _saveLayout();
+      }
+      if (ctrl && !shift && event.logicalKey == LogicalKeyboardKey.keyB) {
+        setState(() => _activeActivity = ActivityType.files);
+      }
+      if (ctrl && !shift && event.logicalKey == LogicalKeyboardKey.keyN) {
+        _addSession('New Session', 'build');
+      }
+      if (!ctrl && !shift && event.logicalKey == LogicalKeyboardKey.escape) {
+        if (_activeFile != null) {
+          _closeFile(_activeFile!);
+        }
+      }
+    }
   }
 
   Widget _buildTitleBar() {
@@ -615,6 +672,30 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
             ),
           ),
           const SizedBox(width: 16),
+          if (_downloadProgress != null && _downloadProgress! < 1.0)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 40,
+                  height: 8,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _downloadProgress,
+                      backgroundColor: dcStatusBarBorder,
+                      valueColor: const AlwaysStoppedAnimation<Color>(dcAccent),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${(_downloadProgress! * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(fontSize: 10, color: dcTextWhite),
+                ),
+                const SizedBox(width: 16),
+              ],
+            ),
           Text(
             tokLabel,
             style: const TextStyle(fontSize: 11, color: dcTextWhite),
