@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/app_version.dart';
 import '../ai/local_ai_manager.dart';
+import '../ai/model_download_manager.dart';
+import '../ai/model_recommendation_engine.dart';
+import '../ai/performance_monitor.dart';
 import '../agent/agent_engine.dart';
 import '../agent/agent_tool.dart';
 import '../agent/permission_manager.dart';
@@ -15,6 +19,7 @@ import 'session_tab_bar.dart';
 import 'agent_chat_screen.dart';
 import 'context_panel.dart';
 import 'code_preview.dart';
+import '../terminal/terminal_shell.dart';
 
 class DesktopWorkspace extends StatefulWidget {
   const DesktopWorkspace({super.key});
@@ -45,6 +50,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   bool _isStreaming = false;
   final List<ContextFile> _contextFiles = [];
   final List<AgentLogEntry> _logs = [];
+
+  HardwareInfo? _hardwareInfo;
+  PerformanceMetrics? _latestMetrics;
 
   late final LocalAIManager _aiManager;
   late final AgentEngine _agentEngine;
@@ -85,6 +93,12 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
     _aiManager.addListener(_onAiStateChanged);
     _aiManager.initialize();
+    _aiManager.performanceMonitor.metricsStream.listen((m) {
+      if (mounted) setState(() => _latestMetrics = m);
+    });
+    _aiManager.getHardwareInfo().then((h) {
+      if (mounted) setState(() => _hardwareInfo = h);
+    });
 
     _logs.add(AgentLogEntry(
       time: _timeNow(),
@@ -436,6 +450,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                   });
                 }
 
+
   Widget _buildTitleBar() {
     return Container(
       height: 36,
@@ -533,45 +548,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: RichText(
-                text: const TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '\$ ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: Color(0xFF00FF00),
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'ambot_ai --version\n',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: Color(0xFFCCCCCC),
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'Ambot AI Desktop 1.6.6\n\n',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: Color(0xFF858585),
-                      ),
-                    ),
-                    TextSpan(
-                      text: '\$ ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: Color(0xFF00FF00),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              padding: const EdgeInsets.only(top: 0),
+              child: TerminalShell(),
             ),
           ),
         ],
@@ -580,6 +558,26 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   }
 
   Widget _buildStatusBar() {
+    final stateLabel = switch (_aiManager.state) {
+      ModelState.ready => 'AI Ready',
+      ModelState.loading => 'Loading…',
+      ModelState.switching => 'Switching…',
+      ModelState.error => 'Error',
+      ModelState.idle => 'No Model',
+    };
+    final stateColor = switch (_aiManager.state) {
+      ModelState.ready => const Color(0xFF4EC9B0),
+      ModelState.error => const Color(0xFFF44747),
+      _ => const Color(0xFFDCDCAA),
+    };
+    final gpuName = _hardwareInfo?.gpuName ?? 'CPU';
+    final vram = _hardwareInfo?.gpuVRAMMB ?? 0;
+    final gpuLabel = vram > 0 ? '$gpuName ($vram MB)' : gpuName;
+    final modelName = _aiManager.currentModel?.name ?? 'none';
+    final tokLabel = _latestMetrics != null
+        ? '${_latestMetrics!.tokensPerSecond.toStringAsFixed(1)} tok/s'
+        : '— tok/s';
+
     return Container(
       height: 22,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -591,26 +589,29 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.circle, size: 6, color: Color(0xFF4EC9B0)),
+          Icon(Icons.circle, size: 6, color: stateColor),
           const SizedBox(width: 6),
-          const Text(
-            'AI Ready',
-            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+          Text(
+            stateLabel,
+            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const SizedBox(width: 16),
-          const Text(
-            'GPU: RTX 4060',
-            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+          Text(
+            'GPU: $gpuLabel',
+            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const SizedBox(width: 16),
-          const Text(
-            'Model: 8B Q4_K_M',
-            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+          GestureDetector(
+            onTap: _showModelSelector,
+            child: Text(
+              'Model: $modelName',
+              style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF), decoration: TextDecoration.underline),
+            ),
           ),
           const SizedBox(width: 16),
-          const Text(
-            '23 tok/s',
-            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+          Text(
+            tokLabel,
+            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const Spacer(),
           Text(
@@ -621,5 +622,76 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       ),
     );
   }
-}
 
+  void _showModelSelector() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return FutureBuilder<List<LocalModelInfo>>(
+          future: _aiManager.downloadManager.getAvailableModels(),
+          builder: (ctx, snap) {
+            final models = snap.data ?? [];
+            return AlertDialog(
+              backgroundColor: const Color(0xFF252526),
+              title: const Text('Select Model', style: TextStyle(color: Color(0xFFCCCCCC))),
+              content: SizedBox(
+                width: 320,
+                height: 300,
+                child: ListView.builder(
+                  itemCount: models.length,
+                  itemBuilder: (ctx, i) {
+                    final model = models[i];
+                    final isActive = _aiManager.currentModel?.id == model.id;
+                    return ListTile(
+                      dense: true,
+                      leading: Icon(isActive ? Icons.check_circle : Icons.circle_outlined,
+                          color: isActive ? const Color(0xFF4EC9B0) : const Color(0xFF858585), size: 18),
+                      title: Text(model.name, style: const TextStyle(color: Color(0xFFCCCCCC), fontSize: 13)),
+                      subtitle: Text(
+                        '${model.quantization} · ${model.sizeLabel} · ctx ${model.contextSize}',
+                        style: const TextStyle(color: Color(0xFF858585), fontSize: 11),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _switchModel(model);
+                      },
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _switchModel(LocalModelInfo model) async {
+    try {
+      final isDownloaded = await _aiManager.downloadManager.isModelDownloaded(model.id);
+      if (!mounted) return;
+      if (!isDownloaded) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF252526),
+            title: const Text('Download Model', style: TextStyle(color: Color(0xFFCCCCCC))),
+            content: Text('Download ${model.name} (${model.sizeLabel})?', style: const TextStyle(color: Color(0xFFCCCCCC))),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Download')),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+        await _aiManager.downloadAndLoadModel(model);
+      } else {
+        await _aiManager.switchModel(model);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load model: $e')));
+      }
+    }
+  }
+}
