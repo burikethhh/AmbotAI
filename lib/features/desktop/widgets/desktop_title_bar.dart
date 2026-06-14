@@ -127,14 +127,14 @@ class _DesktopTitleBarState extends ConsumerState<DesktopTitleBar> {
         _WindowButton(
           icon: Icons.remove,
           color: c.textTertiary,
-          onTap: () async {},
+          onTap: () async => await DesktopWindowManager.minimize(),
         ),
         _WindowButton(
           icon: _isMaximized ? Icons.filter_none : Icons.crop_square,
           color: c.textTertiary,
           onTap: () async {
             if (_isMaximized) {
-              await DesktopWindowManager.maximize();
+              await DesktopWindowManager.restore();
             } else {
               await DesktopWindowManager.maximize();
             }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../desktop_colors.dart';
 
 class FileTreeItem {
   final String name;
@@ -186,7 +187,7 @@ class _FileTreeState extends State<FileTree> {
                   Icon(
                     isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
                     size: 14,
-                    color: const Color(0xFF858585),
+                    color: dcTextMuted,
                   ),
                   const SizedBox(width: 4),
                   Icon(
@@ -196,14 +197,14 @@ class _FileTreeState extends State<FileTree> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFCCCCCC),
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: dcText,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ),
                 ],
               ),
@@ -226,24 +227,24 @@ class _FileTreeState extends State<FileTree> {
         color: isSelected ? const Color(0xFF37373D) : Colors.transparent,
         child: Row(
           children: [
-            Icon(
-              _fileIcon(item.name),
-              size: 14,
-              color: const Color(0xFF858585),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                item.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isSelected
-                      ? const Color(0xFFFFA726)
-                      : const Color(0xFFCCCCCC),
-                ),
-                overflow: TextOverflow.ellipsis,
+              Icon(
+                _fileIcon(item.name),
+                size: 14,
+                color: dcTextMuted,
               ),
-            ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  item.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isSelected
+                        ? dcAccent
+                        : dcText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
           ],
         ),
       ),
@@ -261,7 +262,7 @@ class _FileTreeState extends State<FileTree> {
               '  (empty)',
               style: TextStyle(
                 fontSize: 11,
-                color: Color(0xFF858585),
+                color: dcTextMuted,
                 fontStyle: FontStyle.italic,
               ),
             ),

@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
-
-const Color _bg = Color(0xFF252526);
-const Color _border = Color(0xFF3C3C3C);
-const Color _text = Color(0xFFCCCCCC);
-const Color _muted = Color(0xFF858585);
-const Color _accent = Color(0xFFFFA726);
-const Color _surface = Color(0xFF2D2D2D);
+import '../desktop_colors.dart';
 
 class ContextPanel extends StatefulWidget {
   final List<ContextFile> files;
@@ -37,7 +31,7 @@ class _ContextPanelState extends State<ContextPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _bg,
+      color: dcSidebarBg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -53,8 +47,8 @@ class _ContextPanelState extends State<ContextPanel> {
     return Container(
       height: 32,
       decoration: const BoxDecoration(
-        color: _surface,
-        border: Border(bottom: BorderSide(color: _border)),
+        color: dcSurface,
+        border: Border(bottom: BorderSide(color: dcBorder)),
       ),
       child: Row(
         children: [
@@ -74,19 +68,19 @@ class _ContextPanelState extends State<ContextPanel> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: isActive ? _accent : Colors.transparent, width: 2),
+            bottom: BorderSide(color: isActive ? dcAccent : Colors.transparent, width: 2),
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 12, color: isActive ? _accent : _muted),
+            Icon(icon, size: 12, color: isActive ? dcAccent : dcTextMuted),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: isActive ? _accent : _muted,
+                color: isActive ? dcAccent : dcTextMuted,
                 letterSpacing: 0.5,
               ),
             ),
@@ -114,7 +108,7 @@ class _ContextPanelState extends State<ContextPanel> {
       return Center(
         child: Text(
           'No files in context',
-          style: TextStyle(fontSize: 11, color: _muted, fontStyle: FontStyle.italic),
+          style: TextStyle(fontSize: 11, color: dcTextMuted, fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -141,7 +135,7 @@ class _ContextPanelState extends State<ContextPanel> {
         ),
         child: Row(
           children: [
-            Icon(_fileIcon(file.path), size: 14, color: isSelected ? _accent : _muted),
+            Icon(_fileIcon(file.path), size: 14, color: isSelected ? dcAccent : dcTextMuted),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -149,13 +143,13 @@ class _ContextPanelState extends State<ContextPanel> {
                 children: [
                   Text(
                     file.name,
-                    style: TextStyle(fontSize: 12, color: isSelected ? _accent : _text),
+                    style: TextStyle(fontSize: 12, color: isSelected ? dcAccent : dcText),
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (file.description != null)
                     Text(
                       file.description!,
-                      style: const TextStyle(fontSize: 10, color: _muted),
+                      style: const TextStyle(fontSize: 10, color: dcTextMuted),
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
@@ -189,7 +183,7 @@ class _ContextPanelState extends State<ContextPanel> {
       return Center(
         child: Text(
           'No logs yet',
-          style: TextStyle(fontSize: 11, color: _muted, fontStyle: FontStyle.italic),
+          style: TextStyle(fontSize: 11, color: dcTextMuted, fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -214,7 +208,7 @@ class _ContextPanelState extends State<ContextPanel> {
         children: [
           Text(
             log.time,
-            style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: _muted),
+            style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: dcTextMuted),
           ),
           const SizedBox(width: 8),
           Icon(_logIcon(log.level), size: 12, color: color),
@@ -232,13 +226,13 @@ class _ContextPanelState extends State<ContextPanel> {
       case 'info':
         return const Color(0xFF569CD6);
       case 'success':
-        return const Color(0xFF4EC9B0);
+        return dcSuccess;
       case 'warning':
-        return const Color(0xFFDCDCA0);
+        return dcWarning;
       case 'error':
-        return const Color(0xFFF44747);
+        return dcError;
       default:
-        return _muted;
+        return dcTextMuted;
     }
   }
 
@@ -271,13 +265,13 @@ class _ContextPanelState extends State<ContextPanel> {
           const Text(
             'MEMORY',
             style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: _muted, letterSpacing: 1,
+              fontSize: 10, fontWeight: FontWeight.w600, color: dcTextMuted, letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Working on ${widget.files.length} files',
-            style: const TextStyle(fontSize: 12, color: _text),
+            style: const TextStyle(fontSize: 12, color: dcText),
           ),
         ],
       ),
@@ -290,8 +284,8 @@ class _ContextPanelState extends State<ContextPanel> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: _muted)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accent)),
+          Text(label, style: const TextStyle(fontSize: 12, color: dcTextMuted)),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: dcAccent)),
         ],
       ),
     );
@@ -301,14 +295,14 @@ class _ContextPanelState extends State<ContextPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: const BoxDecoration(
-        color: _surface,
-        border: Border(top: BorderSide(color: _border)),
+        color: dcSurface,
+        border: Border(top: BorderSide(color: dcBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Input: ${widget.inputTokens}', style: const TextStyle(fontSize: 10, color: _muted)),
-          Text('Output: ${widget.outputTokens}', style: const TextStyle(fontSize: 10, color: _muted)),
+          Text('Input: ${widget.inputTokens}', style: const TextStyle(fontSize: 10, color: dcTextMuted)),
+          Text('Output: ${widget.outputTokens}', style: const TextStyle(fontSize: 10, color: dcTextMuted)),
         ],
       ),
     );

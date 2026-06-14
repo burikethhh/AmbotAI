@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-const Color _bg = Color(0xFF1E1E1E);
-const Color _text = Color(0xFFCCCCCC);
-const Color _muted = Color(0xFF858585);
-const Color _accent = Color(0xFFFFA726);
-const Color _surface = Color(0xFF2D2D2D);
-const Color _inputBg = Color(0xFF3C3C3C);
-const Color _border = Color(0xFF3C3C3C);
-const Color _userBg = Color(0xFF2D2D2D);
+import '../desktop_colors.dart';
 
 enum MessageRole { user, agent, system, tool }
 
@@ -126,7 +118,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _bg,
+      color: dcBg,
       child: Column(
         children: [
           Expanded(child: _buildMessageList()),
@@ -153,11 +145,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.smart_toy, size: 40, color: _accent.withValues(alpha: 0.3)),
+          Icon(Icons.smart_toy, size: 40, color: dcAccent.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
-          const Text('AGENTIC WORKSPACE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _accent, letterSpacing: 2)),
+          const Text('AGENTIC WORKSPACE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: dcAccent, letterSpacing: 2)),
           const SizedBox(height: 6),
-          const Text('Describe what you want to build, fix, or explore.', style: TextStyle(fontSize: 12, color: _muted)),
+          const Text('Describe what you want to build, fix, or explore.', style: TextStyle(fontSize: 12, color: dcTextMuted)),
           const SizedBox(height: 20),
           _buildSuggestionChips(),
         ],
@@ -175,11 +167,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: _surface,
+              color: dcSurface,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: _border),
+              border: Border.all(color: dcBorder),
             ),
-            child: Text(s, style: const TextStyle(fontSize: 12, color: _accent)),
+            child: Text(s, style: const TextStyle(fontSize: 12, color: dcAccent)),
           ),
         );
       }).toList(),
@@ -203,15 +195,15 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         children: [
           Container(
             width: 24, height: 24,
-            decoration: BoxDecoration(color: _accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-            child: const Icon(Icons.person, size: 14, color: _accent),
+            decoration: BoxDecoration(color: dcAccent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+            child: const Icon(Icons.person, size: 14, color: dcAccent),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: _userBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
-              child: Text(msg.content, style: const TextStyle(fontSize: 13, color: _text)),
+              decoration: BoxDecoration(color: dcSurface, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
+              child: Text(msg.content, style: const TextStyle(fontSize: 13, color: dcText)),
             ),
           ),
         ],
@@ -227,8 +219,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         children: [
           Container(
             width: 24, height: 24,
-            decoration: BoxDecoration(color: _accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-            child: const Icon(Icons.smart_toy, size: 14, color: _accent),
+            decoration: BoxDecoration(color: dcAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+            child: const Icon(Icons.smart_toy, size: 14, color: dcAccent),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -240,10 +232,10 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                 if (msg.content.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+                    decoration: BoxDecoration(color: dcSurface, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
                     child: msg.isStreaming
                         ? _buildStreamingIndicator()
-                        : Text(msg.content, style: const TextStyle(fontSize: 13, color: _text)),
+                        : Text(msg.content, style: const TextStyle(fontSize: 13, color: dcText)),
                   ),
               ],
             ),
@@ -257,20 +249,20 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+      decoration: BoxDecoration(color: dcSurface, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(_toolIcon(call.name), size: 14, color: _accent),
+              Icon(_toolIcon(call.name), size: 14, color: dcAccent),
               const SizedBox(width: 6),
-              Text(_toolLabel(call.name), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _accent)),
+              Text(_toolLabel(call.name), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: dcAccent)),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   call.parameters.entries.map((e) => '${e.key}: ${e.value}').join(', '),
-                  style: const TextStyle(fontSize: 10, color: _muted), maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, color: dcTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -278,7 +270,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
           if (call.thinking != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(call.thinking!, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: _muted)),
+              child: Text(call.thinking!, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: dcTextMuted)),
             ),
         ],
       ),
@@ -286,7 +278,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Widget _buildToolResultBlock(ChatToolResult result) {
-    final color = result.success ? const Color(0xFF4EC9B0) : const Color(0xFFF44747);
+    final color = result.success ? dcSuccess : dcError;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       child: Column(
@@ -311,8 +303,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             Container(
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
-              child: Text(result.content, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: _muted), maxLines: 10, overflow: TextOverflow.ellipsis),
+              decoration: BoxDecoration(color: dcBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
+              child: Text(result.content, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: dcTextMuted), maxLines: 10, overflow: TextOverflow.ellipsis),
             ),
           if (result.diff != null) _buildDiffPreview(result.diff!),
         ],
@@ -324,23 +316,23 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+      decoration: BoxDecoration(color: dcBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(diff.file, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: _muted)),
+          Text(diff.file, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: dcTextMuted)),
           const SizedBox(height: 4),
           Row(
             children: [
-              Text('+${diff.addedLines}', style: const TextStyle(fontSize: 11, color: Color(0xFF4EC9B0))),
+Text('+${diff.addedLines}', style: const TextStyle(fontSize: 11, color: dcSuccess)),
               const SizedBox(width: 8),
-              Text('-${diff.removedLines}', style: const TextStyle(fontSize: 11, color: Color(0xFFF44747))),
+Text('-${diff.removedLines}', style: const TextStyle(fontSize: 11, color: dcError)),
             ],
           ),
           if (diff.preview != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(diff.preview!, style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: _muted), maxLines: 3, overflow: TextOverflow.ellipsis),
+              child: Text(diff.preview!, style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: dcTextMuted), maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
         ],
       ),
@@ -352,9 +344,9 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       padding: const EdgeInsets.only(left: 34, bottom: 8),
       child: Row(
         children: [
-          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_accent))),
+          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(dcAccent))),
           const SizedBox(width: 8),
-          Text(msg.content, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: _muted)),
+          Text(msg.content, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: dcTextMuted)),
         ],
       ),
     );
@@ -364,16 +356,16 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Center(child: Text(msg.content, style: TextStyle(fontSize: 11, color: _muted))),
+      child: Center(child: Text(msg.content, style: TextStyle(fontSize: 11, color: dcTextMuted))),
     );
   }
 
   Widget _buildStreamingIndicator() {
     return Row(
       children: [
-        const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_accent))),
+        const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(dcAccent))),
         const SizedBox(width: 8),
-        const Text('Thinking...', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: _accent)),
+        const Text('Thinking...', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: dcAccent)),
       ],
     );
   }
@@ -381,7 +373,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   Widget _buildInputBar() {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(color: _bg, border: Border(top: BorderSide(color: _border))),
+      decoration: const BoxDecoration(color: dcBg, border: Border(top: BorderSide(color: dcBorder))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -403,7 +395,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
               Expanded(
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 40),
-                  decoration: BoxDecoration(color: _inputBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+                  decoration: BoxDecoration(color: dcBorder, borderRadius: BorderRadius.circular(6), border: Border.all(color: dcBorder)),
                   child: KeyboardListener(
                     focusNode: FocusNode(),
                     onKeyEvent: (event) {
@@ -415,10 +407,10 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                       controller: _inputController,
                       focusNode: _inputFocus,
                       maxLines: null,
-                      style: const TextStyle(fontSize: 13, color: _text),
+                      style: const TextStyle(fontSize: 13, color: dcText),
                       decoration: const InputDecoration(
                         hintText: 'Describe what you want to do...',
-                        hintStyle: TextStyle(fontSize: 13, color: _muted),
+                        hintStyle: TextStyle(fontSize: 13, color: dcTextMuted),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
@@ -432,7 +424,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text('Enter to send  ·  Ctrl+Enter for newline', style: TextStyle(fontSize: 10, color: _muted)),
+          const Text('Enter to send  ·  Ctrl+Enter for newline', style: TextStyle(fontSize: 10, color: dcTextMuted)),
         ],
       ),
     );
@@ -443,8 +435,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       onTap: () => _inputController.text += prefix,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(4), border: Border.all(color: _border)),
-        child: Text('$prefix$label', style: const TextStyle(fontSize: 10, color: _accent)),
+        decoration: BoxDecoration(color: dcSurface, borderRadius: BorderRadius.circular(4), border: Border.all(color: dcBorder)),
+        child: Text('$prefix$label', style: const TextStyle(fontSize: 10, color: dcAccent)),
       ),
     );
   }
@@ -454,7 +446,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       onTap: _send,
       child: Container(
         width: 40, height: 40,
-        decoration: BoxDecoration(color: widget.isStreaming ? _muted : _accent, borderRadius: BorderRadius.circular(6)),
+        decoration: BoxDecoration(color: widget.isStreaming ? dcTextMuted : dcAccent, borderRadius: BorderRadius.circular(6)),
         child: Icon(widget.isStreaming ? Icons.stop : Icons.arrow_upward, color: Colors.white, size: 20),
       ),
     );

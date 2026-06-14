@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../desktop_colors.dart';
 import 'package:flutter/services.dart';
 import '../agent/tools/shell_tools.dart';
 
@@ -139,7 +140,7 @@ class _TerminalShellState extends State<TerminalShell> {
     return GestureDetector(
       onTap: () => _focusNode.requestFocus(),
       child: Container(
-        color: const Color(0xFF1E1E1E),
+        color: dcBg,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -163,38 +164,38 @@ class _TerminalShellState extends State<TerminalShell> {
       case _LineStyle.prompt:
         return Text(
           line.text,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF4EC9B0), height: 1.4),
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcSuccess, height: 1.4),
         );
       case _LineStyle.command:
         return Text(
           line.text,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFFDCDCAA), height: 1.4),
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcWarning, height: 1.4),
         );
       case _LineStyle.output:
         return Text(
           line.text,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFFCCCCCC), height: 1.4),
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcText, height: 1.4),
         );
       case _LineStyle.error:
         return Text(
           line.text,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFFF44747), height: 1.4),
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcError, height: 1.4),
         );
       case _LineStyle.dim:
         return Text(
           line.text,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF858585), height: 1.4),
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcTextMuted, height: 1.4),
         );
     }
   }
 
   Widget _buildInputLine() {
     return Container(
-      color: const Color(0xFF1E1E1E),
+      color: dcBg,
       padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
       child: Row(
         children: [
-          const Text('\$ ', style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF4EC9B0))),
+          const Text('\$ ', style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcSuccess)),
           Expanded(
             child: KeyboardListener(
               focusNode: _keyboardFocusNode,
@@ -228,7 +229,7 @@ class _TerminalShellState extends State<TerminalShell> {
                 controller: _inputController,
                 focusNode: _focusNode,
                 enabled: !_executing,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFFCCCCCC)),
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: dcText),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   isDense: true,

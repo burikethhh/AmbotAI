@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../desktop_colors.dart';
 
 enum ActivityType {
   files,
@@ -52,19 +53,19 @@ class ActivityBar extends StatelessWidget {
           decoration: BoxDecoration(
             border: isActive
                 ? const Border(
-                    left: BorderSide(color: Color(0xFFFFA726), width: 2),
+                    left: BorderSide(color: dcAccent, width: 2),
                   )
                 : null,
             color: isActive
-                ? const Color(0xFF2D2D2D)
+                ? dcSurface
                 : Colors.transparent,
           ),
           child: Icon(
             icon,
             size: 22,
             color: isActive
-                ? const Color(0xFFFFA726)
-                : const Color(0xFF858585),
+                ? dcAccent
+                : dcTextMuted,
           ),
         ),
       ),

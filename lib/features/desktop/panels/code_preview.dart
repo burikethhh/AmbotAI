@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../desktop_colors.dart';
 
 class CodePreview extends StatefulWidget {
   final String filePath;
@@ -65,12 +66,12 @@ class _CodePreviewState extends State<CodePreview> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1E1E1E),
+      color: dcBg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(),
-          const Divider(height: 1, color: Color(0xFF3C3C3C)),
+          const Divider(height: 1, color: dcBorder),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -82,14 +83,14 @@ class _CodePreviewState extends State<CodePreview> {
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
+        color: dcSurface,
       ),
       child: Row(
         children: [
           Icon(
             _fileIcon(widget.filePath),
             size: 14,
-            color: const Color(0xFF858585),
+            color: dcTextMuted,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -97,7 +98,7 @@ class _CodePreviewState extends State<CodePreview> {
               widget.filePath.split(Platform.pathSeparator).last,
               style: const TextStyle(
                 fontSize: 12,
-                color: Color(0xFFCCCCCC),
+                color: dcText,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -106,7 +107,7 @@ class _CodePreviewState extends State<CodePreview> {
             widget.filePath,
             style: const TextStyle(
               fontSize: 10,
-              color: Color(0xFF858585),
+              color: dcTextMuted,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -115,7 +116,7 @@ class _CodePreviewState extends State<CodePreview> {
             onTap: widget.onClose,
             child: Container(
               padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.close, size: 14, color: Color(0xFF858585)),
+              child: const Icon(Icons.close, size: 14, color: dcTextMuted),
             ),
           ),
         ],
@@ -139,11 +140,11 @@ class _CodePreviewState extends State<CodePreview> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 32, color: Color(0xFFF44747)),
+            const Icon(Icons.error_outline, size: 32, color: dcError),
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: const TextStyle(fontSize: 12, color: Color(0xFFF44747)),
+              style: const TextStyle(fontSize: 12, color: dcError),
             ),
           ],
         ),
@@ -156,7 +157,7 @@ class _CodePreviewState extends State<CodePreview> {
       children: [
         Container(
           width: 48,
-          color: const Color(0xFF1E1E1E),
+          color: dcBg,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(lines.length, (i) {
@@ -168,7 +169,7 @@ class _CodePreviewState extends State<CodePreview> {
                   style: const TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: Color(0xFF858585),
+                    color: dcTextMuted,
                     height: 1.5,
                   ),
                 ),
@@ -178,7 +179,7 @@ class _CodePreviewState extends State<CodePreview> {
         ),
         Container(
           width: 1,
-          color: const Color(0xFF3C3C3C),
+          color: dcBorder,
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -204,7 +205,7 @@ class _CodePreviewState extends State<CodePreview> {
         style: const TextStyle(
           fontSize: 12,
           fontFamily: 'monospace',
-          color: Color(0xFFCCCCCC),
+          color: dcText,
           height: 1.5,
         ),
       ),

@@ -19,6 +19,7 @@ import 'session_tab_bar.dart';
 import 'agent_chat_screen.dart';
 import 'context_panel.dart';
 import 'code_preview.dart';
+import '../desktop_colors.dart';
 import '../terminal/terminal_shell.dart';
 
 class DesktopWorkspace extends StatefulWidget {
@@ -294,7 +295,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: dcBg,
       body: Column(
         children: [
           _buildTitleBar(),
@@ -392,8 +393,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     return Container(
       height: 36,
       decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
-        border: Border(bottom: BorderSide(color: Color(0xFF3C3C3C))),
+        color: dcSurface,
+        border: Border(bottom: BorderSide(color: dcBorder)),
       ),
       child: Row(
         children: [
@@ -413,29 +414,29 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         height: 36,
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF1E1E1E) : Colors.transparent,
+          color: isActive ? dcBg : Colors.transparent,
           border: Border(
-            top: BorderSide(color: isActive ? const Color(0xFFFFA726) : Colors.transparent, width: 1),
-            right: const BorderSide(color: Color(0xFF3C3C3C), width: 1),
+            top: BorderSide(color: isActive ? dcAccent : Colors.transparent, width: 1),
+            right: const BorderSide(color: dcBorder, width: 1),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) Icon(icon, size: 12, color: isActive ? const Color(0xFFFFA726) : const Color(0xFF858585)),
+            if (icon != null) Icon(icon, size: 12, color: isActive ? dcAccent : dcTextMuted),
             if (icon != null) const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isActive ? const Color(0xFFCCCCCC) : const Color(0xFF858585),
+                color: isActive ? dcText : dcTextMuted,
               ),
             ),
             if (filePath != null) ...[
               const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => _closeFile(filePath),
-                child: Icon(Icons.close, size: 12, color: isActive ? const Color(0xFFCCCCCC) : Colors.transparent),
+                child: Icon(Icons.close, size: 12, color: isActive ? dcText : Colors.transparent),
               ),
             ],
           ],
@@ -457,9 +458,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     return Container(
       height: 36,
       decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
+        color: dcSurface,
         border: Border(
-          bottom: BorderSide(color: Color(0xFF252526), width: 1),
+          bottom: BorderSide(color: dcSidebarBg, width: 1),
         ),
       ),
       child: Row(
@@ -470,14 +471,14 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.smart_toy, color: Color(0xFFFFA726), size: 16),
+                Icon(Icons.smart_toy, color: dcAccent, size: 16),
                 SizedBox(width: 6),
                 Text(
                   'Ambot AI',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFCCCCCC),
+                    color: dcText,
                   ),
                 ),
               ],
@@ -493,7 +494,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                 child: Icon(
                   Icons.fullscreen_exit,
                   size: 14,
-                  color: const Color(0xFF858585),
+                  color: dcTextMuted,
                 ),
               ),
             ),
@@ -507,9 +508,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     return Container(
       height: 150,
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
+        color: dcBg,
         border: Border(
-          top: BorderSide(color: Color(0xFF3C3C3C)),
+          top: BorderSide(color: dcBorder),
         ),
       ),
       child: Column(
@@ -519,21 +520,21 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
             height: 28,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
+              color: dcSurface,
               border: Border(
-                bottom: BorderSide(color: Color(0xFF3C3C3C)),
+                bottom: BorderSide(color: dcBorder),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.terminal, size: 12, color: Color(0xFF858585)),
+                const Icon(Icons.terminal, size: 12, color: dcTextMuted),
                 const SizedBox(width: 6),
                 const Text(
                   'TERMINAL',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFCCCCCC),
+                    color: dcText,
                     letterSpacing: 1,
                   ),
                 ),
@@ -543,7 +544,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                     setState(() => _terminalVisible = false);
                     _saveLayout();
                   },
-                  child: const Icon(Icons.close, size: 14, color: Color(0xFF858585)),
+                  child: const Icon(Icons.close, size: 14, color: dcTextMuted),
                 ),
               ],
             ),
@@ -571,9 +572,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       ModelState.idle => 'No Model',
     };
     final stateColor = switch (_aiManager.state) {
-      ModelState.ready => const Color(0xFF4EC9B0),
-      ModelState.error => const Color(0xFFF44747),
-      _ => const Color(0xFFDCDCAA),
+      ModelState.ready => dcSuccess,
+      ModelState.error => dcError,
+      _ => dcWarning,
     };
     final gpuName = _hardwareInfo?.gpuName ?? 'CPU';
     final vram = _hardwareInfo?.gpuVRAMMB ?? 0;
@@ -587,9 +588,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       height: 22,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
-        color: Color(0xFF007ACC),
+        color: dcStatusBar,
         border: Border(
-          top: BorderSide(color: Color(0xFF0062A3)),
+          top: BorderSide(color: dcStatusBarBorder),
         ),
       ),
       child: Row(
@@ -598,30 +599,30 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           const SizedBox(width: 6),
           Text(
             stateLabel,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+            style: const TextStyle(fontSize: 11, color: dcTextWhite),
           ),
           const SizedBox(width: 16),
           Text(
             'GPU: $gpuLabel',
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+            style: const TextStyle(fontSize: 11, color: dcTextWhite),
           ),
           const SizedBox(width: 16),
           GestureDetector(
             onTap: _showModelSelector,
             child: Text(
               'Model: $modelName',
-              style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF), decoration: TextDecoration.underline),
+              style: const TextStyle(fontSize: 11, color: dcTextWhite, decoration: TextDecoration.underline),
             ),
           ),
           const SizedBox(width: 16),
           Text(
             tokLabel,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+            style: const TextStyle(fontSize: 11, color: dcTextWhite),
           ),
           const Spacer(),
           Text(
             AppVersion.displayVersion,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
+            style: const TextStyle(fontSize: 11, color: dcTextWhite),
           ),
         ],
       ),
@@ -637,8 +638,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           builder: (ctx, snap) {
             final models = snap.data ?? [];
             return AlertDialog(
-              backgroundColor: const Color(0xFF252526),
-              title: const Text('Select Model', style: TextStyle(color: Color(0xFFCCCCCC))),
+              backgroundColor: dcSidebarBg,
+              title: const Text('Select Model', style: TextStyle(color: dcText)),
               content: SizedBox(
                 width: 320,
                 height: 300,
@@ -650,11 +651,11 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                     return ListTile(
                       dense: true,
                       leading: Icon(isActive ? Icons.check_circle : Icons.circle_outlined,
-                          color: isActive ? const Color(0xFF4EC9B0) : const Color(0xFF858585), size: 18),
-                      title: Text(model.name, style: const TextStyle(color: Color(0xFFCCCCCC), fontSize: 13)),
+                          color: isActive ? dcSuccess : dcTextMuted, size: 18),
+                      title: Text(model.name, style: const TextStyle(color: dcText, fontSize: 13)),
                       subtitle: Text(
                         '${model.quantization} · ${model.sizeLabel} · ctx ${model.contextSize}',
-                        style: const TextStyle(color: Color(0xFF858585), fontSize: 11),
+                        style: const TextStyle(color: dcTextMuted, fontSize: 11),
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
@@ -679,9 +680,9 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
         final confirm = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF252526),
-            title: const Text('Download Model', style: TextStyle(color: Color(0xFFCCCCCC))),
-            content: Text('Download ${model.name} (${model.sizeLabel})?', style: const TextStyle(color: Color(0xFFCCCCCC))),
+            backgroundColor: dcSidebarBg,
+            title: const Text('Download Model', style: TextStyle(color: dcText)),
+            content: Text('Download ${model.name} (${model.sizeLabel})?', style: const TextStyle(color: dcText)),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
               TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Download')),

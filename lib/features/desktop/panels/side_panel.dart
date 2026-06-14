@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'activity_bar.dart';
 import 'file_tree.dart';
+import '../desktop_colors.dart';
 
 class SidePanel extends StatelessWidget {
   final ActivityType activity;
@@ -18,12 +19,12 @@ class SidePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      color: const Color(0xFF252526),
+      color: dcSidebarBg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(),
-          const Divider(height: 1, color: Color(0xFF3C3C3C)),
+          const Divider(height: 1, color: dcBorder),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -40,7 +41,7 @@ class SidePanel extends StatelessWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: Color(0xFFCCCCCC),
+          color: dcText,
           letterSpacing: 0.5,
         ),
       ),
@@ -89,15 +90,15 @@ class SidePanel extends StatelessWidget {
           Container(
             height: 28,
             decoration: BoxDecoration(
-              color: const Color(0xFF3C3C3C),
+              color: dcBorder,
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: const Color(0xFF555555)),
             ),
             child: const TextField(
-              style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)),
+              style: TextStyle(fontSize: 12, color: dcText),
               decoration: InputDecoration(
                 hintText: 'Search files...',
-                hintStyle: TextStyle(fontSize: 12, color: Color(0xFF858585)),
+                hintStyle: TextStyle(fontSize: 12, color: dcTextMuted),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 8),
               ),
@@ -110,7 +111,7 @@ class SidePanel extends StatelessWidget {
                 'Type to search across files',
                 style: TextStyle(
                   fontSize: 11,
-                  color: const Color(0xFF858585),
+                  color: dcTextMuted,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -132,7 +133,7 @@ class SidePanel extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: Color(0xFF858585),
+              color: dcTextMuted,
             ),
           ),
         ],
