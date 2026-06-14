@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ai/engine_selector.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/utils/app_version.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
 
@@ -51,7 +52,7 @@ class DesktopStatusBar extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            'v1.6.6',
+            AppVersion.displayVersion,
             style: AppTypography.labelSmall(c.textTertiary),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/app_version.dart';
 import 'resizable_panel.dart';
 import 'session_tab_bar.dart';
 import 'agent_chat_screen.dart';
@@ -351,12 +352,12 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
               ],
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Text(
-                '\$ ambot_ai --version\nAmbot AI v1.6.6\n\$ ',
-                style: TextStyle(
+                '\$ ambot_ai --version\nAmbot AI ${AppVersion.displayVersion}\n\$ ',
+                style: const TextStyle(
                   fontSize: 12,
                   fontFamily: 'monospace',
                   color: Color(0xFF00FF00),
@@ -406,7 +407,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           ),
           const Spacer(),
           Text(
-            'v1.6.6',
+            AppVersion.displayVersion,
             style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
           ),
         ],

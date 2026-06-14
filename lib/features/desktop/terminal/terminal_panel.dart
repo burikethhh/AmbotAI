@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/utils/app_version.dart';
 
 class TerminalLine {
   final String content;
@@ -114,7 +115,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
     }
 
     if (command.toLowerCase() == 'version') {
-      _addSystemLine('Ambot AI v1.6.6');
+      _addSystemLine('Ambot AI ${AppVersion.displayVersion}');
       return;
     }
 

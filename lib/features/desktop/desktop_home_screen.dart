@@ -8,6 +8,7 @@ import '../../core/platform/desktop_keyboard.dart';
 import '../../core/platform/window_manager.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/roles/role.dart';
+import '../../core/utils/app_version.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/theme_colors.dart';
 import '../../features/chat/chat_screen.dart';
@@ -223,7 +224,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen> {
               ),
               const Spacer(),
               Text(
-                'v1.6.6',
+                AppVersion.displayVersion,
                 style: TextStyle(fontSize: 10, color: c.textTertiary),
               ),
             ],

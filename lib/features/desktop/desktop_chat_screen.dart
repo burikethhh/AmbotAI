@@ -389,7 +389,7 @@ class _DesktopChatScreenState extends ConsumerState<DesktopChatScreen> {
   }
 }
 
-class _HeaderButton extends StatelessWidget {
+class _HeaderButton extends StatefulWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
@@ -401,22 +401,36 @@ class _HeaderButton extends StatelessWidget {
   });
 
   @override
+  State<_HeaderButton> createState() => _HeaderButtonState();
+}
+
+class _HeaderButtonState extends State<_HeaderButton> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final c = ThemeColors.of(context);
     return Tooltip(
-      message: tooltip,
+      message: widget.tooltip,
       waitDuration: const Duration(milliseconds: 400),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
-          onTap: onTap,
+          onTap: widget.onTap,
           child: Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
+              color: _isHovered ? c.surfaceColor.withValues(alpha: 0.5) : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, size: 18, color: c.textTertiary),
+            child: Icon(
+              widget.icon,
+              size: 18,
+              color: _isHovered ? c.textPrimary : c.textTertiary,
+            ),
           ),
         ),
       ),
