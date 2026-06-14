@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import '../agent/tools/shell_tools.dart';
 
 class TerminalShell extends StatefulWidget {
-  const TerminalShell({super.key});
+  final VoidCallback? onExit;
+
+  const TerminalShell({super.key, this.onExit});
 
   @override
   State<TerminalShell> createState() => _TerminalShellState();
@@ -15,6 +17,7 @@ class _TerminalShellState extends State<TerminalShell> {
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  final _keyboardFocusNode = FocusNode();
   final List<_TerminalLine> _lines = [];
   final _history = <String>[];
   int _historyIndex = -1;
@@ -35,12 +38,12 @@ class _TerminalShellState extends State<TerminalShell> {
     _inputController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
   void _execute(String input) {
     if (input.trim().isEmpty) {
-      setState(() => _lines.add(_TerminalLine('\$ ', _LineStyle.prompt)));
       return;
     }
 
@@ -56,6 +59,7 @@ class _TerminalShellState extends State<TerminalShell> {
         ));
         _lines.add(_TerminalLine('\$ ', _LineStyle.prompt));
       });
+      _scrollToBottom();
       return;
     }
 
@@ -68,7 +72,7 @@ class _TerminalShellState extends State<TerminalShell> {
     }
 
     if (input == 'exit') {
-      // Handled by parent - close terminal
+      widget.onExit?.call();
       return;
     }
 
@@ -193,7 +197,7 @@ class _TerminalShellState extends State<TerminalShell> {
           const Text('\$ ', style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: Color(0xFF4EC9B0))),
           Expanded(
             child: KeyboardListener(
-              focusNode: FocusNode(),
+              focusNode: _keyboardFocusNode,
               onKeyEvent: (event) {
                 if (event is KeyDownEvent) {
                   if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -231,7 +235,6 @@ class _TerminalShellState extends State<TerminalShell> {
                   contentPadding: EdgeInsets.zero,
                 ),
                 onSubmitted: (value) {
-                  if (value == 'exit') return;
                   _execute(value);
                   _inputController.clear();
                 },

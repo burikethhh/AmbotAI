@@ -53,6 +53,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
   HardwareInfo? _hardwareInfo;
   PerformanceMetrics? _latestMetrics;
+  StreamSubscription<PerformanceMetrics>? _metricsSub;
 
   late final LocalAIManager _aiManager;
   late final AgentEngine _agentEngine;
@@ -93,7 +94,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
     _aiManager.addListener(_onAiStateChanged);
     _aiManager.initialize();
-    _aiManager.performanceMonitor.metricsStream.listen((m) {
+    _metricsSub = _aiManager.performanceMonitor.metricsStream.listen((m) {
       if (mounted) setState(() => _latestMetrics = m);
     });
     _aiManager.getHardwareInfo().then((h) {
@@ -132,6 +133,8 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   @override
   void dispose() {
     _aiManager.removeListener(_onAiStateChanged);
+    _metricsSub?.cancel();
+    _agentEngine.dispose();
     _aiManager.dispose();
     _permissionManager.dispose();
     super.dispose();
@@ -548,7 +551,10 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(top: 0),
-              child: TerminalShell(),
+              child: TerminalShell(onExit: () {
+                setState(() => _terminalVisible = false);
+                _saveLayout();
+              }),
             ),
           ),
         ],
