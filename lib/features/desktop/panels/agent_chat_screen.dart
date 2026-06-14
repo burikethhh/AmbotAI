@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+const Color _bg = Color(0xFF1E1E1E);
+const Color _text = Color(0xFFCCCCCC);
+const Color _muted = Color(0xFF858585);
+const Color _accent = Color(0xFFFFA726);
+const Color _surface = Color(0xFF2D2D2D);
+const Color _inputBg = Color(0xFF3C3C3C);
+const Color _border = Color(0xFF3C3C3C);
+const Color _userBg = Color(0xFF2D2D2D);
+
 enum MessageRole { user, agent, system, tool }
 
 class AgentMessage {
@@ -116,11 +125,14 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(child: _buildMessageList()),
-        _buildInputBar(),
-      ],
+    return Container(
+      color: _bg,
+      child: Column(
+        children: [
+          Expanded(child: _buildMessageList()),
+          _buildInputBar(),
+        ],
+      ),
     );
   }
 
@@ -137,35 +149,16 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Widget _buildEmptyState() {
-    final accent = Theme.of(context).colorScheme.primary;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            _agentIcon(widget.agentType),
-            size: 48,
-            color: accent.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'AGENTIC WORKSPACE',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: accent,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Describe what you want to build, fix, or explore.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
-          const SizedBox(height: 24),
+          Icon(Icons.smart_toy, size: 40, color: _accent.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          const Text('AGENTIC WORKSPACE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _accent, letterSpacing: 2)),
+          const SizedBox(height: 6),
+          const Text('Describe what you want to build, fix, or explore.', style: TextStyle(fontSize: 12, color: _muted)),
+          const SizedBox(height: 20),
           _buildSuggestionChips(),
         ],
       ),
@@ -173,37 +166,20 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Widget _buildSuggestionChips() {
-    final suggestions = [
-      'Build a login page',
-      'Fix the API error',
-      'Refactor this code',
-      'Explain this function',
-    ];
+    final suggestions = ['Build a login page', 'Fix the API error', 'Refactor this code', 'Explain this function'];
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 8, runSpacing: 8,
       children: suggestions.map((s) {
         return GestureDetector(
-          onTap: () {
-            _inputController.text = s;
-            _send();
-          },
+          onTap: () { _inputController.text = s; _send(); },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-              ),
+              color: _surface,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: _border),
             ),
-            child: Text(
-              s,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+            child: Text(s, style: const TextStyle(fontSize: 12, color: _accent)),
           ),
         );
       }).toList(),
@@ -212,180 +188,122 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
   Widget _buildMessage(AgentMessage msg) {
     switch (msg.role) {
-      case MessageRole.user:
-        return _buildUserMessage(msg);
-      case MessageRole.agent:
-        return _buildAgentMessage(msg);
-      case MessageRole.tool:
-        return _buildToolMessage(msg);
-      case MessageRole.system:
-        return _buildSystemMessage(msg);
+      case MessageRole.user: return _buildUserMessage(msg);
+      case MessageRole.agent: return _buildAgentMessage(msg);
+      case MessageRole.tool: return _buildToolMessage(msg);
+      case MessageRole.system: return _buildSystemMessage(msg);
     }
   }
 
   Widget _buildUserMessage(AgentMessage msg) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAvatar(Icons.person, Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 12),
+          Container(
+            width: 24, height: 24,
+            decoration: BoxDecoration(color: _accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+            child: const Icon(Icons.person, size: 14, color: _accent),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Text(
-                msg.content,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                ),
-              ),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: _userBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+              child: Text(msg.content, style: const TextStyle(fontSize: 13, color: _text)),
             ),
           ),
-          const SizedBox(width: 8),
-          _buildTimestamp(msg.timestamp),
         ],
       ),
     );
   }
 
   Widget _buildAgentMessage(AgentMessage msg) {
-    final accent = Theme.of(context).colorScheme.primary;
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAvatar(_agentIcon(widget.agentType), accent),
-          const SizedBox(width: 12),
+          Container(
+            width: 24, height: 24,
+            decoration: BoxDecoration(color: _accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+            child: const Icon(Icons.smart_toy, size: 14, color: _accent),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (msg.toolCall != null) _buildToolCallBlock(msg.toolCall!),
                 if (msg.toolResult != null) _buildToolResultBlock(msg.toolResult!),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                    ),
+                if (msg.content.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+                    child: msg.isStreaming
+                        ? _buildStreamingIndicator()
+                        : Text(msg.content, style: const TextStyle(fontSize: 13, color: _text)),
                   ),
-                  child: msg.isStreaming
-                      ? _buildStreamingIndicator()
-                      : Text(
-                          msg.content,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          _buildTimestamp(msg.timestamp),
         ],
       ),
     );
   }
 
   Widget _buildToolCallBlock(ToolCall call) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final icon = _toolIcon(call.name);
-    final toolLabel = _toolLabel(call.name);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.15),
-        ),
-      ),
+      decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: accent),
+              Icon(_toolIcon(call.name), size: 14, color: _accent),
               const SizedBox(width: 6),
-              Text(
-                toolLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: accent,
-                ),
-              ),
+              Text(_toolLabel(call.name), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _accent)),
               const SizedBox(width: 6),
-              Text(
-                call.parameters.entries.map((e) => '${e.key}: ${e.value}').join(', '),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Theme.of(context).textTheme.bodySmall?.color,
+              Expanded(
+                child: Text(
+                  call.parameters.entries.map((e) => '${e.key}: ${e.value}').join(', '),
+                  style: const TextStyle(fontSize: 10, color: _muted), maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          if (call.thinking != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              call.thinking!,
-              style: TextStyle(
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
+          if (call.thinking != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(call.thinking!, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: _muted)),
             ),
-          ],
         ],
       ),
     );
   }
 
   Widget _buildToolResultBlock(ChatToolResult result) {
-    final color = result.success ? Colors.green : Colors.red;
+    final color = result.success ? const Color(0xFF4EC9B0) : const Color(0xFFF44747);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
+              color: color.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: color.withValues(alpha: 0.15)),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(
-                  result.success ? Icons.check_circle : Icons.error,
-                  size: 14,
-                  color: color,
-                ),
+                Icon(result.success ? Icons.check_circle : Icons.error, size: 14, color: color),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    result.title,
-                    style: TextStyle(fontSize: 11, color: color),
-                  ),
-                ),
+                Expanded(child: Text(result.title, style: TextStyle(fontSize: 11, color: color))),
               ],
             ),
           ),
@@ -393,23 +311,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             Container(
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                result.content,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: Theme.of(context).textTheme.bodySmall?.color,
-                ),
-                maxLines: 10,
-                overflow: TextOverflow.ellipsis,
-              ),
+              decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
+              child: Text(result.content, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: _muted), maxLines: 10, overflow: TextOverflow.ellipsis),
             ),
           if (result.diff != null) _buildDiffPreview(result.diff!),
         ],
@@ -417,125 +320,41 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     );
   }
 
-  IconData _toolIcon(String toolId) {
-    switch (toolId) {
-      case 'read_file':
-      case 'write_file':
-      case 'edit_file':
-        return Icons.description;
-      case 'list_directory':
-        return Icons.folder_open;
-      case 'shell':
-        return Icons.terminal;
-      case 'search_files':
-        return Icons.search;
-      case 'grep':
-        return Icons.find_in_page;
-      default:
-        return Icons.build_circle_outlined;
-    }
-  }
-
-  String _toolLabel(String toolId) {
-    switch (toolId) {
-      case 'read_file':
-        return 'READ';
-      case 'write_file':
-        return 'WRITE';
-      case 'edit_file':
-        return 'EDIT';
-      case 'list_directory':
-        return 'LIST';
-      case 'shell':
-        return 'SHELL';
-      case 'search_files':
-        return 'SEARCH';
-      case 'grep':
-        return 'GREP';
-      default:
-        return toolId.toUpperCase();
-    }
-  }
-
   Widget _buildDiffPreview(DiffInfo diff) {
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-        ),
-      ),
+      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            diff.file,
-            style: TextStyle(
-              fontSize: 11,
-              fontFamily: 'monospace',
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
+          Text(diff.file, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: _muted)),
           const SizedBox(height: 4),
           Row(
             children: [
-              Text(
-                '+${diff.addedLines}',
-                style: const TextStyle(fontSize: 11, color: Colors.green),
-              ),
+              Text('+${diff.addedLines}', style: const TextStyle(fontSize: 11, color: Color(0xFF4EC9B0))),
               const SizedBox(width: 8),
-              Text(
-                '-${diff.removedLines}',
-                style: const TextStyle(fontSize: 11, color: Colors.red),
-              ),
+              Text('-${diff.removedLines}', style: const TextStyle(fontSize: 11, color: Color(0xFFF44747))),
             ],
           ),
-          if (diff.preview != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              diff.preview!,
-              style: TextStyle(
-                fontSize: 10,
-                fontFamily: 'monospace',
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+          if (diff.preview != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(diff.preview!, style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: _muted), maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
-          ],
         ],
       ),
     );
   }
 
   Widget _buildToolMessage(AgentMessage msg) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    return Padding(
+      padding: const EdgeInsets.only(left: 34, bottom: 8),
       child: Row(
         children: [
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(
-                Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
+          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_accent))),
           const SizedBox(width: 8),
-          Text(
-            msg.content,
-            style: TextStyle(
-              fontSize: 11,
-              fontStyle: FontStyle.italic,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
+          Text(msg.content, style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: _muted)),
         ],
       ),
     );
@@ -545,66 +364,16 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: Text(
-          msg.content,
-          style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAvatar(IconData icon, Color color) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 16, color: color),
-    );
-  }
-
-  Widget _buildTimestamp(DateTime time) {
-    return Text(
-      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-      style: TextStyle(
-        fontSize: 10,
-        color: Theme.of(context).textTheme.bodySmall?.color,
-      ),
+      child: Center(child: Text(msg.content, style: TextStyle(fontSize: 11, color: _muted))),
     );
   }
 
   Widget _buildStreamingIndicator() {
     return Row(
       children: [
-        SizedBox(
-          width: 12,
-          height: 12,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(
-              Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ),
+        const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_accent))),
         const SizedBox(width: 8),
-        Text(
-          'Thinking...',
-          style: TextStyle(
-            fontSize: 12,
-            fontStyle: FontStyle.italic,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
+        const Text('Thinking...', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: _accent)),
       ],
     );
   }
@@ -612,14 +381,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   Widget _buildInputBar() {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
+      decoration: const BoxDecoration(color: _bg, border: Border(top: BorderSide(color: _border))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -641,19 +403,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
               Expanded(
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 40),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                    ),
-                  ),
+                  decoration: BoxDecoration(color: _inputBg, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
                   child: KeyboardListener(
                     focusNode: FocusNode(),
                     onKeyEvent: (event) {
-                      if (event is KeyDownEvent &&
-                          event.logicalKey == LogicalKeyboardKey.enter &&
-                          HardwareKeyboard.instance.isControlPressed) {
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter && HardwareKeyboard.instance.isControlPressed) {
                         _send();
                       }
                     },
@@ -661,21 +415,12 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                       controller: _inputController,
                       focusNode: _inputFocus,
                       maxLines: null,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                      decoration: InputDecoration(
+                      style: const TextStyle(fontSize: 13, color: _text),
+                      decoration: const InputDecoration(
                         hintText: 'Describe what you want to do...',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          fontSize: 13,
-                        ),
+                        hintStyle: TextStyle(fontSize: 13, color: _muted),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                       onSubmitted: (_) => _send(),
                     ),
@@ -687,13 +432,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            'Enter to send  ·  Ctrl+Enter for newline',
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
+          const Text('Enter to send  ·  Ctrl+Enter for newline', style: TextStyle(fontSize: 10, color: _muted)),
         ],
       ),
     );
@@ -704,60 +443,44 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       onTap: () => _inputController.text += prefix,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          '$prefix$label',
-          style: TextStyle(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
+        decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(4), border: Border.all(color: _border)),
+        child: Text('$prefix$label', style: const TextStyle(fontSize: 10, color: _accent)),
       ),
     );
   }
 
   Widget _buildSendButton() {
-    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: _send,
       child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: widget.isStreaming
-              ? Theme.of(context).disabledColor
-              : accent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          widget.isStreaming ? Icons.stop : Icons.arrow_upward,
-          color: Colors.white,
-          size: 20,
-        ),
+        width: 40, height: 40,
+        decoration: BoxDecoration(color: widget.isStreaming ? _muted : _accent, borderRadius: BorderRadius.circular(6)),
+        child: Icon(widget.isStreaming ? Icons.stop : Icons.arrow_upward, color: Colors.white, size: 20),
       ),
     );
   }
 
-  IconData _agentIcon(String type) {
-    switch (type) {
-      case 'build':
-        return Icons.build;
-      case 'plan':
-        return Icons.lightbulb_outline;
-      case 'refactor':
-        return Icons.auto_fix_high;
-      case 'debug':
-        return Icons.bug_report;
-      case 'document':
-        return Icons.description;
-      default:
-        return Icons.smart_toy;
+  IconData _toolIcon(String toolId) {
+    switch (toolId) {
+      case 'read_file': case 'write_file': case 'edit_file': return Icons.description_outlined;
+      case 'list_directory': return Icons.folder_open;
+      case 'shell': return Icons.terminal;
+      case 'search_files': return Icons.search;
+      case 'grep': return Icons.find_in_page;
+      default: return Icons.build_circle_outlined;
+    }
+  }
+
+  String _toolLabel(String toolId) {
+    switch (toolId) {
+      case 'read_file': return 'READ';
+      case 'write_file': return 'WRITE';
+      case 'edit_file': return 'EDIT';
+      case 'list_directory': return 'LIST';
+      case 'shell': return 'SHELL';
+      case 'search_files': return 'SEARCH';
+      case 'grep': return 'GREP';
+      default: return toolId.toUpperCase();
     }
   }
 }

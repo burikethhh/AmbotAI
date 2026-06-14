@@ -7,6 +7,8 @@ import '../agent/agent_tool.dart';
 import '../agent/permission_manager.dart';
 import '../agent/tools/file_tools.dart';
 import '../agent/tools/shell_tools.dart';
+import 'activity_bar.dart';
+import 'side_panel.dart';
 import 'resizable_panel.dart';
 import 'session_tab_bar.dart';
 import 'agent_chat_screen.dart';
@@ -20,19 +22,20 @@ class DesktopWorkspace extends StatefulWidget {
 }
 
 class _DesktopWorkspaceState extends State<DesktopWorkspace> {
-  static const _kSidebarCollapsed = 'ws_sidebar_collapsed';
   static const _kContextPanelRatio = 'ws_context_ratio';
   static const _kContextCollapsed = 'ws_context_collapsed';
   static const _kTerminalVisible = 'ws_terminal_visible';
   static const _kFocusMode = 'ws_focus_mode';
+  static const _kActivity = 'ws_activity';
 
   final List<AgentSession> _sessions = [];
   int _activeSessionIndex = 0;
-  bool _sidebarCollapsed = false;
   bool _contextPanelCollapsed = false;
   bool _terminalVisible = false;
   bool _focusMode = false;
   double _contextRatio = 0.7;
+  ActivityType _activeActivity = ActivityType.files;
+  String? _selectedFilePath;
 
   final List<AgentMessage> _messages = [];
   bool _isStreaming = false;
@@ -119,28 +122,28 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   Future<void> _loadLayout() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _sidebarCollapsed = prefs.getBool(_kSidebarCollapsed) ?? false;
       _contextRatio = prefs.getDouble(_kContextPanelRatio) ?? 0.7;
       _contextPanelCollapsed = prefs.getBool(_kContextCollapsed) ?? false;
       _terminalVisible = prefs.getBool(_kTerminalVisible) ?? false;
       _focusMode = prefs.getBool(_kFocusMode) ?? false;
+      final activityIndex = prefs.getInt(_kActivity) ?? 0;
+      _activeActivity = ActivityType.values[activityIndex.clamp(0, ActivityType.values.length - 1)];
     });
   }
 
   Future<void> _saveLayout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kSidebarCollapsed, _sidebarCollapsed);
     await prefs.setDouble(_kContextPanelRatio, _contextRatio);
     await prefs.setBool(_kContextCollapsed, _contextPanelCollapsed);
     await prefs.setBool(_kTerminalVisible, _terminalVisible);
     await prefs.setBool(_kFocusMode, _focusMode);
+    await prefs.setInt(_kActivity, _activeActivity.index);
   }
 
   void _toggleFocusMode() {
     setState(() {
       _focusMode = !_focusMode;
       if (_focusMode) {
-        _sidebarCollapsed = true;
         _contextPanelCollapsed = true;
         _terminalVisible = false;
       }
@@ -193,7 +196,6 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
       if (!mounted) return;
 
-      // Add tool call messages
       for (final step in execution.steps) {
         setState(() {
           _messages.add(AgentMessage(
@@ -230,7 +232,6 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
         });
       }
 
-      // Add final answer
       setState(() {
         _messages.add(AgentMessage(
           id: 'answer_${execution.id}',
@@ -264,6 +265,11 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     }
   }
 
+  void _onFileSelected(String path) {
+    setState(() => _selectedFilePath = path);
+    _sendMessage('read file $path');
+  }
+
   String _timeNow() {
     final now = DateTime.now();
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -272,22 +278,32 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: const Color(0xFF1E1E1E),
       body: Column(
         children: [
           _buildTitleBar(),
-          if (!_focusMode)
-            SessionTabBar(
-              sessions: _sessions,
-              activeIndex: _activeSessionIndex,
-              onSelect: (i) => setState(() => _activeSessionIndex = i),
-              onClose: _closeSession,
-              onNewSession: () => _addSession('Session ${_sessions.length + 1}', 'build'),
-            ),
           Expanded(
             child: Row(
               children: [
-                if (!_sidebarCollapsed && !_focusMode) _buildSidebar(),
+                if (!_focusMode) ActivityBar(
+                  activeActivity: _activeActivity,
+                  onActivityChanged: (type) {
+                    setState(() => _activeActivity = type);
+                    _saveLayout();
+                  },
+                ),
+                if (!_focusMode && _activeActivity != ActivityType.files)
+                  SidePanel(
+                    activity: _activeActivity,
+                    selectedFile: _selectedFilePath,
+                    onFileSelected: _onFileSelected,
+                  ),
+                if (!_focusMode && _activeActivity == ActivityType.files)
+                  SidePanel(
+                    activity: _activeActivity,
+                    selectedFile: _selectedFilePath,
+                    onFileSelected: _onFileSelected,
+                  ),
                 Expanded(
                   child: _focusMode
                       ? AgentChatScreen(
@@ -298,41 +314,54 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
                               ? _sessions[_activeSessionIndex].agentType
                               : 'build',
                         )
-                      : ResizablePanel(
-                          axis: PanelAxis.horizontal,
-                          initialRatio: _contextRatio,
-                          minRatio: 0.4,
-                          maxRatio: 0.9,
-                          collapsible: true,
-                          collapsed: _contextPanelCollapsed,
-                          onToggleCollapse: () {
-                            setState(() => _contextPanelCollapsed = !_contextPanelCollapsed);
-                            _saveLayout();
-                          },
-                          onRatioChanged: (ratio) {
-                            _contextRatio = ratio;
-                          },
-                          panel: ContextPanel(
-                            files: _contextFiles,
-                            logs: _logs,
-                            inputTokens: 2340,
-                            outputTokens: 890,
-                          ),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: AgentChatScreen(
-                                  messages: _messages,
-                                  onSendMessage: _sendMessage,
-                                  isStreaming: _isStreaming,
-                                  agentType: _sessions.isNotEmpty
-                                      ? _sessions[_activeSessionIndex].agentType
-                                      : 'build',
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: ResizablePanel(
+                                axis: PanelAxis.horizontal,
+                                initialRatio: _contextRatio,
+                                minRatio: 0.4,
+                                maxRatio: 0.9,
+                                collapsible: true,
+                                collapsed: _contextPanelCollapsed,
+                                onToggleCollapse: () {
+                                  setState(() => _contextPanelCollapsed = !_contextPanelCollapsed);
+                                  _saveLayout();
+                                },
+                                onRatioChanged: (ratio) {
+                                  _contextRatio = ratio;
+                                },
+                                panel: ContextPanel(
+                                  files: _contextFiles,
+                                  logs: _logs,
+                                  inputTokens: 2340,
+                                  outputTokens: 890,
+                                ),
+                                child: Column(
+                                  children: [
+                                    SessionTabBar(
+                                      sessions: _sessions,
+                                      activeIndex: _activeSessionIndex,
+                                      onSelect: (i) => setState(() => _activeSessionIndex = i),
+                                      onClose: _closeSession,
+                                      onNewSession: () => _addSession('Session ${_sessions.length + 1}', 'build'),
+                                    ),
+                                    Expanded(
+                                      child: AgentChatScreen(
+                                        messages: _messages,
+                                        onSendMessage: _sendMessage,
+                                        isStreaming: _isStreaming,
+                                        agentType: _sessions.isNotEmpty
+                                            ? _sessions[_activeSessionIndex].agentType
+                                            : 'build',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (_terminalVisible) _buildTerminal(),
-                            ],
-                          ),
+                            ),
+                            if (_terminalVisible) _buildTerminal(),
+                          ],
                         ),
                 ),
               ],
@@ -345,148 +374,51 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   }
 
   Widget _buildTitleBar() {
-    final accent = Theme.of(context).colorScheme.primary;
     return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+      height: 36,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2D2D2D),
         border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
+          bottom: BorderSide(color: Color(0xFF252526), width: 1),
         ),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 12),
-          Icon(Icons.smart_toy, color: accent, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            'AMBOT',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: accent,
-              letterSpacing: 1,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.smart_toy, color: Color(0xFFFFA726), size: 16),
+                SizedBox(width: 6),
+                Text(
+                  'Ambot AI',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFCCCCCC),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 16),
-          _buildTitleButton('Session', _sessions.isNotEmpty
-              ? _sessions[_activeSessionIndex].title
-              : 'None'),
-          const SizedBox(width: 8),
-          _buildTitleButton('Agent', _sessions.isNotEmpty
-              ? _sessions[_activeSessionIndex].agentType.toUpperCase()
-              : 'BUILD'),
-          const SizedBox(width: 8),
-          _buildTitleButton('Model', 'Llama 3 8B'),
           const Spacer(),
-          _buildTitleAction(Icons.code, 'Programmer', () {}),
-          const SizedBox(width: 4),
-          _buildTitleAction(Icons.chat, 'General Chat', () {}),
-          const SizedBox(width: 4),
-          _buildTitleAction(Icons.image, 'Image Gen', () {}),
-          const SizedBox(width: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTitleButton(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).textTheme.bodySmall?.color,
+          if (!_focusMode)
+            GestureDetector(
+              onTap: _toggleFocusMode,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 24,
+                child: Icon(
+                  Icons.fullscreen_exit,
+                  size: 14,
+                  color: const Color(0xFF858585),
+                ),
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
+          const SizedBox(width: 8),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTitleAction(IconData icon, String tooltip, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(icon, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebar() {
-    return Container(
-      width: 48,
-      color: Theme.of(context).colorScheme.surface,
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildSidebarButton(Icons.build, 'Build', () {}),
-          _buildSidebarButton(Icons.lightbulb_outline, 'Plan', () {}),
-          _buildSidebarButton(Icons.auto_fix_high, 'Refactor', () {}),
-          _buildSidebarButton(Icons.bug_report, 'Debug', () {}),
-          _buildSidebarButton(Icons.description, 'Document', () {}),
-          const Spacer(),
-          _buildSidebarButton(
-            _focusMode ? Icons.fullscreen_exit : Icons.fullscreen,
-            _focusMode ? 'Exit Focus' : 'Focus Mode',
-            _toggleFocusMode,
-          ),
-          _buildSidebarButton(Icons.terminal, 'Terminal', () {
-            setState(() => _terminalVisible = !_terminalVisible);
-            _saveLayout();
-          }),
-          _buildSidebarButton(Icons.settings, 'Settings', () {}),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarButton(IconData icon, String tooltip, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        child: Container(
-          width: 40,
-          height: 40,
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 18, color: Theme.of(context).textTheme.bodySmall?.color),
-        ),
       ),
     );
   }
@@ -494,12 +426,10 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   Widget _buildTerminal() {
     return Container(
       height: 150,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E1E),
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
+          top: BorderSide(color: Color(0xFF3C3C3C)),
         ),
       ),
       child: Column(
@@ -508,33 +438,32 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           Container(
             height: 28,
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2D2D2D),
               border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                ),
+                bottom: BorderSide(color: Color(0xFF3C3C3C)),
               ),
             ),
             child: Row(
               children: [
-                Text(
+                const Icon(Icons.terminal, size: 12, color: Color(0xFF858585)),
+                const SizedBox(width: 6),
+                const Text(
                   'TERMINAL',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Color(0xFFCCCCCC),
                     letterSpacing: 1,
                   ),
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => setState(() => _terminalVisible = false),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Theme.of(context).textTheme.bodySmall?.color,
-                  ),
+                  onTap: () {
+                    setState(() => _terminalVisible = false);
+                    _saveLayout();
+                  },
+                  child: const Icon(Icons.close, size: 14, color: Color(0xFF858585)),
                 ),
               ],
             ),
@@ -542,12 +471,42 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(
-                '\$ ambot_ai --version\nAmbot AI ${AppVersion.displayVersion}\n\$ ',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  color: Color(0xFF00FF00),
+              child: RichText(
+                text: const TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '\$ ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: Color(0xFF00FF00),
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'ambot_ai --version\n',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: Color(0xFFCCCCCC),
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Ambot AI Desktop 1.6.6\n\n',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: Color(0xFF858585),
+                      ),
+                    ),
+                    TextSpan(
+                      text: '\$ ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: Color(0xFF00FF00),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -559,46 +518,45 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
 
   Widget _buildStatusBar() {
     return Container(
-      height: 24,
+      height: 22,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+      decoration: const BoxDecoration(
+        color: Color(0xFF007ACC),
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
+          top: BorderSide(color: Color(0xFF0062A3)),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.circle, size: 8, color: Colors.green),
+          const Icon(Icons.circle, size: 6, color: Color(0xFF4EC9B0)),
           const SizedBox(width: 6),
-          Text(
-            'Connected to local AI',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+          const Text(
+            'AI Ready',
+            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const SizedBox(width: 16),
-          Text(
+          const Text(
             'GPU: RTX 4060',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const SizedBox(width: 16),
-          Text(
+          const Text(
             'Model: 8B Q4_K_M',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const SizedBox(width: 16),
-          Text(
+          const Text(
             '23 tok/s',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+            style: TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
           const Spacer(),
           Text(
             AppVersion.displayVersion,
-            style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+            style: const TextStyle(fontSize: 11, color: Color(0xFFFFFFFF)),
           ),
         ],
       ),
     );
   }
 }
+

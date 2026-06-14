@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+const Color _bg = Color(0xFF252526);
+const Color _border = Color(0xFF3C3C3C);
+const Color _text = Color(0xFFCCCCCC);
+const Color _muted = Color(0xFF858585);
+const Color _accent = Color(0xFFFFA726);
+const Color _surface = Color(0xFF2D2D2D);
+
 class ContextPanel extends StatefulWidget {
   final List<ContextFile> files;
   final List<AgentLogEntry> logs;
@@ -29,33 +36,30 @@ class _ContextPanelState extends State<ContextPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildTabs(),
-        Expanded(
-          child: _buildContent(),
-        ),
-        _buildTokenBar(),
-      ],
+    return Container(
+      color: _bg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTabs(),
+          Expanded(child: _buildContent()),
+          _buildTokenBar(),
+        ],
+      ),
     );
   }
 
   Widget _buildTabs() {
     return Container(
       height: 32,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: _surface,
+        border: Border(bottom: BorderSide(color: _border)),
       ),
       child: Row(
         children: [
           _buildTab(0, 'FILES', Icons.folder_outlined),
-          _buildTab(1, 'LOGS', Icons.terminal),
+          _buildTab(1, 'LOGS', Icons.list_alt),
           _buildTab(2, 'STATE', Icons.psychology),
         ],
       ),
@@ -64,29 +68,26 @@ class _ContextPanelState extends State<ContextPanel> {
 
   Widget _buildTab(int index, String label, IconData icon) {
     final isActive = _selectedTab == index;
-    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () => setState(() => _selectedTab = index),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: isActive ? accent : Colors.transparent,
-              width: 2,
-            ),
+            bottom: BorderSide(color: isActive ? _accent : Colors.transparent, width: 2),
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 12, color: isActive ? accent : Theme.of(context).textTheme.bodySmall?.color),
+            Icon(icon, size: 12, color: isActive ? _accent : _muted),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: isActive ? accent : Theme.of(context).textTheme.bodySmall?.color,
+                color: isActive ? _accent : _muted,
+                letterSpacing: 0.5,
               ),
             ),
           ],
@@ -113,10 +114,7 @@ class _ContextPanelState extends State<ContextPanel> {
       return Center(
         child: Text(
           'No files in context',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodySmall?.color,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontSize: 11, color: _muted, fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -132,23 +130,18 @@ class _ContextPanelState extends State<ContextPanel> {
   }
 
   Widget _buildFileItem(ContextFile file, bool isSelected) {
-    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () => widget.onSelectFile?.call(file.path),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         margin: const EdgeInsets.only(bottom: 2),
         decoration: BoxDecoration(
-          color: isSelected ? accent.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSelected ? const Color(0xFF37373D) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
           children: [
-            Icon(
-              _fileIcon(file.path),
-              size: 14,
-              color: isSelected ? accent : Theme.of(context).textTheme.bodySmall?.color,
-            ),
+            Icon(_fileIcon(file.path), size: 14, color: isSelected ? _accent : _muted),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -156,19 +149,13 @@ class _ContextPanelState extends State<ContextPanel> {
                 children: [
                   Text(
                     file.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? accent : Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
+                    style: TextStyle(fontSize: 12, color: isSelected ? _accent : _text),
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (file.description != null)
                     Text(
                       file.description!,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).textTheme.bodySmall?.color,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: _muted),
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
@@ -202,10 +189,7 @@ class _ContextPanelState extends State<ContextPanel> {
       return Center(
         child: Text(
           'No logs yet',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodySmall?.color,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontSize: 11, color: _muted, fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -222,7 +206,7 @@ class _ContextPanelState extends State<ContextPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -230,16 +214,13 @@ class _ContextPanelState extends State<ContextPanel> {
         children: [
           Text(
             log.time,
-            style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
+            style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: _muted),
           ),
           const SizedBox(width: 8),
           Icon(_logIcon(log.level), size: 12, color: color),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(
-              log.message,
-              style: TextStyle(fontSize: 11, color: color),
-            ),
+            child: Text(log.message, style: TextStyle(fontSize: 11, color: color)),
           ),
         ],
       ),
@@ -249,15 +230,15 @@ class _ContextPanelState extends State<ContextPanel> {
   Color _logColor(String level) {
     switch (level) {
       case 'info':
-        return Colors.blue;
+        return const Color(0xFF569CD6);
       case 'success':
-        return Colors.green;
+        return const Color(0xFF4EC9B0);
       case 'warning':
-        return Colors.orange;
+        return const Color(0xFFDCDCA0);
       case 'error':
-        return Colors.red;
+        return const Color(0xFFF44747);
       default:
-        return Colors.grey;
+        return _muted;
     }
   }
 
@@ -286,23 +267,17 @@ class _ContextPanelState extends State<ContextPanel> {
           _buildStateItem('Model', 'Llama 3 8B'),
           _buildStateItem('Context', '${widget.inputTokens} tokens'),
           _buildStateItem('Status', 'Connected'),
-          const Divider(height: 24),
-          Text(
+          const SizedBox(height: 16),
+          const Text(
             'MEMORY',
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              letterSpacing: 1,
+              fontSize: 10, fontWeight: FontWeight.w600, color: _muted, letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Working on ${widget.files.length} files',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-            ),
+            style: const TextStyle(fontSize: 12, color: _text),
           ),
         ],
       ),
@@ -315,20 +290,8 @@ class _ContextPanelState extends State<ContextPanel> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, color: _muted)),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accent)),
         ],
       ),
     );
@@ -337,31 +300,15 @@ class _ContextPanelState extends State<ContextPanel> {
   Widget _buildTokenBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: _surface,
+        border: Border(top: BorderSide(color: _border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Input: ${widget.inputTokens}',
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
-          Text(
-            'Output: ${widget.outputTokens}',
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
-          ),
+          Text('Input: ${widget.inputTokens}', style: const TextStyle(fontSize: 10, color: _muted)),
+          Text('Output: ${widget.outputTokens}', style: const TextStyle(fontSize: 10, color: _muted)),
         ],
       ),
     );
