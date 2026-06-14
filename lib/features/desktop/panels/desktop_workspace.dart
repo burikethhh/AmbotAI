@@ -149,7 +149,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
         children: [
           _buildTitleBar(),
@@ -372,7 +372,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     return Container(
       height: 150,
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1117),
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
           top: BorderSide(
             color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
@@ -386,7 +386,7 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
             height: 28,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF161B22),
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
                 bottom: BorderSide(
                   color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
