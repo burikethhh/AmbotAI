@@ -1,11 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'agent_tool.dart';
 
-enum PermissionAction {
-  approve,
-  deny,
-  always,
-}
+enum PermissionAction { approve, deny, always }
 
 class PermissionRequest {
   final String toolId;
@@ -40,11 +37,12 @@ class PermissionManager extends ChangeNotifier {
   final Map<String, bool> _alwaysDenied = {};
   final List<PermissionRequest> _pendingRequests = [];
 
+  Completer<PermissionDecision>? _currentCompleter;
+
   PermissionRequest? _currentRequest;
   PermissionRequest? get currentRequest => _currentRequest;
 
-  bool _dialogOpen = false;
-  bool get dialogOpen => _dialogOpen;
+  bool get hasPendingRequest => _currentRequest != null;
 
   Future<PermissionDecision> requestPermission(PermissionRequest request) async {
     if (_alwaysApproved.containsKey(request.toolId)) {
@@ -56,34 +54,35 @@ class PermissionManager extends ChangeNotifier {
 
     _currentRequest = request;
     _pendingRequests.add(request);
+    _currentCompleter = Completer<PermissionDecision>();
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 100));
+    final decision = await _currentCompleter!.future;
+
+    _pendingRequests.remove(request);
+    _currentRequest = _pendingRequests.isNotEmpty ? _pendingRequests.last : null;
+    _currentCompleter = null;
     notifyListeners();
 
-    return const PermissionDecision(action: PermissionAction.approve);
+    return decision;
   }
 
-  void handleDecision(String requestId, PermissionDecision decision) {
-    switch (decision.action) {
-      case PermissionAction.approve:
-        if (decision.rememberChoice) {
-          _alwaysApproved[requestId] = true;
-        }
-        break;
-      case PermissionAction.deny:
-        if (decision.rememberChoice) {
-          _alwaysDenied[requestId] = true;
-        }
-        break;
-      case PermissionAction.always:
-        _alwaysApproved[requestId] = true;
-        break;
+  void handleDecision(PermissionDecision decision) {
+    if (_currentCompleter == null || _currentCompleter!.isCompleted) return;
+
+    if (decision.rememberChoice && _currentRequest != null) {
+      switch (decision.action) {
+        case PermissionAction.approve:
+        case PermissionAction.always:
+          _alwaysApproved[_currentRequest!.toolId] = true;
+          break;
+        case PermissionAction.deny:
+          _alwaysDenied[_currentRequest!.toolId] = true;
+          break;
+      }
     }
 
-    _pendingRequests.removeWhere((r) => r.toolId == requestId);
-    _currentRequest = null;
-    notifyListeners();
+    _currentCompleter!.complete(decision);
   }
 
   void revokeAlways(String toolId) {
@@ -157,13 +156,14 @@ class PermissionDialog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              request.parameters.toString(),
+              _formatParameters(request.parameters),
               style: TextStyle(
                 fontSize: 11,
                 fontFamily: 'monospace',
@@ -186,15 +186,23 @@ class PermissionDialog extends StatelessWidget {
           )),
           child: const Text('Allow'),
         ),
-        TextButton(
+        FilledButton(
           onPressed: () => onDecision(const PermissionDecision(
-            action: PermissionAction.approve,
+            action: PermissionAction.always,
             rememberChoice: true,
           )),
           child: const Text('Always Allow'),
         ),
       ],
     );
+  }
+
+  String _formatParameters(Map<String, dynamic> params) {
+    final buffer = StringBuffer();
+    for (final entry in params.entries) {
+      buffer.writeln('${entry.key}: ${entry.value}');
+    }
+    return buffer.toString();
   }
 
   IconData _permissionIcon(PermissionLevel level) {

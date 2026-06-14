@@ -44,6 +44,20 @@ class DesktopWindowManager {
     } catch (_) {}
   }
 
+  static Future<void> minimize() async {
+    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
+    try {
+      await _channel.invokeMethod('minimize');
+    } catch (_) {}
+  }
+
+  static Future<void> restore() async {
+    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
+    try {
+      await _channel.invokeMethod('restore');
+    } catch (_) {}
+  }
+
   static Future<bool> isMaximized() async {
     if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return false;
     try {

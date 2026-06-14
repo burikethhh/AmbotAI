@@ -2,7 +2,158 @@ import 'dart:async';
 import 'dart:io';
 import '../agent_tool.dart';
 
+class CommandSandbox {
+  static final List<String> _blockedCommands = [
+    'rm -rf /',
+    'rm -rf /*',
+    'format c:',
+    'format d:',
+    'del /s /q c:\\',
+    'del /s /q d:\\',
+    'rmdir /s /q c:\\',
+    'rmdir /s /q d:\\',
+    'shutdown',
+    'reboot',
+    'halt',
+    'init 0',
+    'mkfs',
+    'dd if=/dev/zero',
+    'chmod -R 777 /',
+    'chown -R',
+    ':(){ :|:& };:',
+    'fork bomb',
+  ];
+
+  static final List<String> _blockedPatterns = [
+    RegExp(r'rm\s+-[a-z]*r[a-z]*f[a-z]*\s+/', caseSensitive: false).pattern,
+    RegExp(r'rm\s+-[a-z]*f[a-z]*r[a-z]*\s+/', caseSensitive: false).pattern,
+    RegExp(r'del\s+/[sS]\s+/[qQ]\s+[a-zA-Z]:\\', caseSensitive: false).pattern,
+    RegExp(r'rmdir\s+/[sS]\s+/[qQ]\s+[a-zA-Z]:\\', caseSensitive: false).pattern,
+    RegExp(r'format\s+[a-zA-Z]:', caseSensitive: false).pattern,
+    RegExp(r'shutdown\s+[/\-]', caseSensitive: false).pattern,
+    RegExp(r'reboot', caseSensitive: false).pattern,
+  ];
+
+  static final List<String> _safePatterns = [
+    RegExp(r'^flutter\s+', caseSensitive: false).pattern,
+    RegExp(r'^dart\s+', caseSensitive: false).pattern,
+    RegExp(r'^git\s+', caseSensitive: false).pattern,
+    RegExp(r'^npm\s+', caseSensitive: false).pattern,
+    RegExp(r'^node\s+', caseSensitive: false).pattern,
+    RegExp(r'^python\s+', caseSensitive: false).pattern,
+    RegExp(r'^pip\s+', caseSensitive: false).pattern,
+    RegExp(r'^ls\b', caseSensitive: false).pattern,
+    RegExp(r'^dir\b', caseSensitive: false).pattern,
+    RegExp(r'^pwd\b', caseSensitive: false).pattern,
+    RegExp(r'^cd\s+', caseSensitive: false).pattern,
+    RegExp(r'^cat\s+', caseSensitive: false).pattern,
+    RegExp(r'^type\s+', caseSensitive: false).pattern,
+    RegExp(r'^echo\s+', caseSensitive: false).pattern,
+    RegExp(r'^find\s+', caseSensitive: false).pattern,
+    RegExp(r'^grep\s+', caseSensitive: false).pattern,
+    RegExp(r'^which\s+', caseSensitive: false).pattern,
+    RegExp(r'^where\s+', caseSensitive: false).pattern,
+  ];
+
+  static SandboxResult checkCommand(String command) {
+    final normalized = command.trim().toLowerCase();
+
+    for (final blocked in _blockedCommands) {
+      if (normalized.contains(blocked.toLowerCase())) {
+        return SandboxResult(
+          allowed: false,
+          reason: 'Blocked command: $blocked',
+          riskLevel: RiskLevel.critical,
+        );
+      }
+    }
+
+    for (final pattern in _blockedPatterns) {
+      if (RegExp(pattern, caseSensitive: false).hasMatch(normalized)) {
+        return SandboxResult(
+          allowed: false,
+          reason: 'Pattern matches blocked command',
+          riskLevel: RiskLevel.critical,
+        );
+      }
+    }
+
+    for (final pattern in _safePatterns) {
+      if (RegExp(pattern, caseSensitive: false).hasMatch(normalized)) {
+        return SandboxResult(
+          allowed: true,
+          reason: 'Known safe command',
+          riskLevel: RiskLevel.low,
+        );
+      }
+    }
+
+    if (normalized.contains('rm ') || normalized.contains('del ')) {
+      return SandboxResult(
+        allowed: true,
+        reason: 'File deletion requires confirmation',
+        riskLevel: RiskLevel.medium,
+      );
+    }
+
+    if (normalized.contains('sudo') || normalized.contains('runas')) {
+      return SandboxResult(
+        allowed: false,
+        reason: 'Elevated privileges not allowed',
+        riskLevel: RiskLevel.critical,
+      );
+    }
+
+    return SandboxResult(
+      allowed: true,
+      reason: 'Unrecognized command - user confirmation required',
+      riskLevel: RiskLevel.medium,
+    );
+  }
+
+  static String sanitizePath(String path, String workingDirectory) {
+    final normalized = path.replaceAll('\\', '/');
+
+    if (normalized.contains('..')) {
+      final parts = normalized.split('/');
+      final resolved = <String>[];
+      for (final part in parts) {
+        if (part == '..') {
+          if (resolved.isNotEmpty) resolved.removeLast();
+        } else if (part.isNotEmpty && part != '.') {
+          resolved.add(part);
+        }
+      }
+      return resolved.join('/');
+    }
+
+    if (!normalized.startsWith('/') && !normalized.contains(':')) {
+      return '$workingDirectory/$normalized'.replaceAll('//', '/');
+    }
+
+    return normalized;
+  }
+}
+
+enum RiskLevel { low, medium, high, critical }
+
+class SandboxResult {
+  final bool allowed;
+  final String reason;
+  final RiskLevel riskLevel;
+
+  const SandboxResult({
+    required this.allowed,
+    required this.reason,
+    required this.riskLevel,
+  });
+}
+
 class ShellTool extends AgentTool {
+  final String workingDirectory;
+
+  ShellTool({this.workingDirectory = '.'});
+
   @override
   String get id => 'shell';
 
@@ -10,7 +161,7 @@ class ShellTool extends AgentTool {
   String get name => 'Shell Command';
 
   @override
-  String get description => 'Execute a shell command';
+  String get description => 'Execute a shell command (sandboxed)';
 
   @override
   String get category => 'system';
@@ -39,6 +190,15 @@ class ShellTool extends AgentTool {
     try {
       final command = params['command'] as String;
       final timeout = params['timeout'] as int? ?? 30;
+
+      final sandbox = CommandSandbox.checkCommand(command);
+      if (!sandbox.allowed) {
+        return ToolResult.failure(
+          'Command blocked',
+          'This command is not allowed: ${sandbox.reason}',
+          warnings: [sandbox.reason],
+        );
+      }
 
       final isWindows = Platform.isWindows;
       final shell = isWindows ? 'powershell' : 'bash';
@@ -80,8 +240,7 @@ class ShellTool extends AgentTool {
         data: {
           'command': command,
           'exitCode': exitCode,
-          'stdout': stdout,
-          'stderr': stderr,
+          'riskLevel': sandbox.riskLevel.name,
         },
       );
     } on TimeoutException catch (e) {

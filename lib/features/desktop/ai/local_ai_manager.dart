@@ -34,9 +34,9 @@ class LocalAIManager extends ChangeNotifier {
     ModelRecommendationEngine? recommendationEngine,
     PerformanceMonitor? performanceMonitor,
   })  : downloadManager = downloadManager ?? ModelDownloadManager(),
+        performanceMonitor = performanceMonitor ?? PerformanceMonitor(),
         recommendationEngine = recommendationEngine ??
-            ModelRecommendationEngine(downloadManager ?? ModelDownloadManager()),
-        performanceMonitor = performanceMonitor ?? PerformanceMonitor();
+            ModelRecommendationEngine(downloadManager ??= ModelDownloadManager());
 
   Future<void> initialize() async {
     try {

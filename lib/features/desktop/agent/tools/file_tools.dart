@@ -1,6 +1,93 @@
 import 'dart:io';
 import '../agent_tool.dart';
 
+class FilePathSecurity {
+  static final List<String> _restrictedPaths = [
+    '/etc/passwd',
+    '/etc/shadow',
+    '/etc/sudoers',
+    '/root',
+    '/boot',
+    '/sys',
+    '/proc',
+    'C:\\Windows\\System32',
+    'C:\\Windows\\SysWOW64',
+    'C:\\boot.ini',
+    'C:\\pagefile.sys',
+    'C:\\hiberfil.sys',
+  ];
+
+  static final List<String> _sensitivePatterns = [
+    '.env',
+    '.ssh',
+    '.gnupg',
+    '.aws',
+    '.azure',
+    'credentials',
+    'secrets',
+    'private_key',
+    'id_rsa',
+    'id_ed25519',
+    '.netrc',
+    '.npmrc',
+  ];
+
+  static FilePermission checkPath(String path, String workingDirectory) {
+    final normalized = path.replaceAll('\\', '/').toLowerCase();
+
+    for (final restricted in _restrictedPaths) {
+      if (normalized.startsWith(restricted.toLowerCase())) {
+        return FilePermission(
+          allowed: false,
+          reason: 'Access to system directory restricted: $restricted',
+        );
+      }
+    }
+
+    for (final pattern in _sensitivePatterns) {
+      if (normalized.contains(pattern.toLowerCase())) {
+        return FilePermission(
+          allowed: false,
+          reason: 'Access to sensitive file restricted: $pattern',
+        );
+      }
+    }
+
+    if (!normalized.startsWith('/') && !normalized.contains(':')) {
+      final fullPath = '$workingDirectory/$normalized'.replaceAll('//', '/');
+      return checkPath(fullPath, workingDirectory);
+    }
+
+    return FilePermission(allowed: true, reason: 'Path allowed');
+  }
+
+  static String sandboxPath(String path, String workingDirectory) {
+    final result = checkPath(path, workingDirectory);
+    if (!result.allowed) {
+      throw SecurityException(result.reason);
+    }
+    return path;
+  }
+}
+
+class FilePermission {
+  final bool allowed;
+  final String reason;
+
+  const FilePermission({
+    required this.allowed,
+    required this.reason,
+  });
+}
+
+class SecurityException implements Exception {
+  final String message;
+  SecurityException(this.message);
+
+  @override
+  String toString() => 'SecurityException: $message';
+}
+
 class ReadFileTool extends AgentTool {
   @override
   String get id => 'read_file';
@@ -44,7 +131,9 @@ class ReadFileTool extends AgentTool {
       final offset = params['offset'] as int? ?? 0;
       final limit = params['limit'] as int? ?? 500;
 
-      final fullPath = path.startsWith('/') || path.contains(':') ? path : '$context.workingDirectory/$path';
+      FilePathSecurity.sandboxPath(path, context.workingDirectory);
+
+      final fullPath = path.startsWith('/') || path.contains(':') ? path : '${context.workingDirectory}/$path';
       final file = File(fullPath);
 
       if (!await file.exists()) {
@@ -65,6 +154,8 @@ class ReadFileTool extends AgentTool {
           'limit': limit,
         },
       );
+    } on SecurityException catch (e) {
+      return ToolResult.failure('Access denied', e.message);
     } catch (e) {
       return ToolResult.failure('Error reading file', e.toString());
     }
@@ -109,7 +200,9 @@ class WriteFileTool extends AgentTool {
       final path = params['path'] as String;
       final content = params['content'] as String;
 
-      final fullPath = path.startsWith('/') || path.contains(':') ? path : '$context.workingDirectory/$path';
+      FilePathSecurity.sandboxPath(path, context.workingDirectory);
+
+      final fullPath = path.startsWith('/') || path.contains(':') ? path : '${context.workingDirectory}/$path';
       final file = File(fullPath);
 
       final dirPath = fullPath.substring(0, fullPath.lastIndexOf(Platform.pathSeparator));
@@ -126,6 +219,8 @@ class WriteFileTool extends AgentTool {
         'Successfully wrote $lines lines to $path',
         data: {'path': path, 'lines': lines},
       );
+    } on SecurityException catch (e) {
+      return ToolResult.failure('Access denied', e.message);
     } catch (e) {
       return ToolResult.failure('Error writing file', e.toString());
     }
@@ -180,7 +275,9 @@ class EditFileTool extends AgentTool {
       final newString = params['newString'] as String;
       final replaceAll = params['replaceAll'] as bool? ?? false;
 
-      final fullPath = path.startsWith('/') || path.contains(':') ? path : '$context.workingDirectory/$path';
+      FilePathSecurity.sandboxPath(path, context.workingDirectory);
+
+      final fullPath = path.startsWith('/') || path.contains(':') ? path : '${context.workingDirectory}/$path';
       final file = File(fullPath);
 
       if (!await file.exists()) {
@@ -206,6 +303,8 @@ class EditFileTool extends AgentTool {
         'Successfully edited $path',
         data: {'path': path, 'replaceAll': replaceAll},
       );
+    } on SecurityException catch (e) {
+      return ToolResult.failure('Access denied', e.message);
     } catch (e) {
       return ToolResult.failure('Error editing file', e.toString());
     }
@@ -243,7 +342,10 @@ class ListDirectoryTool extends AgentTool {
   Future<ToolResult> execute(Map<String, dynamic> params, ToolContext context) async {
     try {
       final path = params['path'] as String? ?? '.';
-      final fullPath = path.startsWith('/') || path.contains(':') ? path : '$context.workingDirectory/$path';
+
+      FilePathSecurity.sandboxPath(path, context.workingDirectory);
+
+      final fullPath = path.startsWith('/') || path.contains(':') ? path : '${context.workingDirectory}/$path';
       final dir = Directory(fullPath);
 
       if (!await dir.exists()) {
@@ -277,6 +379,8 @@ class ListDirectoryTool extends AgentTool {
         output,
         data: {'items': items},
       );
+    } on SecurityException catch (e) {
+      return ToolResult.failure('Access denied', e.message);
     } catch (e) {
       return ToolResult.failure('Error listing directory', e.toString());
     }

@@ -166,30 +166,6 @@ class _TerminalPanelState extends State<TerminalPanel> {
     }
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) return;
-
-    if (event.logicalKey == LogicalKeyboardKey.enter) {
-      _executeCommand(_inputController.text);
-      _inputController.clear();
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      if (_historyIndex > 0) {
-        _historyIndex--;
-        _inputController.text = _history[_historyIndex];
-      }
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      if (_historyIndex < _history.length - 1) {
-        _historyIndex++;
-        _inputController.text = _history[_historyIndex];
-      } else {
-        _historyIndex = _history.length;
-        _inputController.clear();
-      }
-    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      _inputController.clear();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -325,9 +301,33 @@ class _TerminalPanelState extends State<TerminalPanel> {
             ),
           ),
           Expanded(
-            child: KeyboardListener(
-              focusNode: FocusNode(),
-              onKeyEvent: _handleKeyEvent,
+            child: Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    if (_historyIndex > 0) {
+                      _historyIndex--;
+                      _inputController.text = _history[_historyIndex];
+                      return KeyEventResult.handled;
+                    }
+                  } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                    if (_historyIndex < _history.length - 1) {
+                      _historyIndex++;
+                      _inputController.text = _history[_historyIndex];
+                      return KeyEventResult.handled;
+                    } else {
+                      _historyIndex = _history.length;
+                      _inputController.clear();
+                      return KeyEventResult.handled;
+                    }
+                  } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+                    _inputController.clear();
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
               child: TextField(
                 controller: _inputController,
                 focusNode: _focusNode,
