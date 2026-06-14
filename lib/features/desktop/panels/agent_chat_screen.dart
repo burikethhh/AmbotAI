@@ -303,6 +303,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
   Widget _buildToolCallBlock(ToolCall call) {
     final accent = Theme.of(context).colorScheme.primary;
+    final icon = _toolIcon(call.name);
+    final toolLabel = _toolLabel(call.name);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
@@ -318,15 +320,25 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.build_circle_outlined, size: 14, color: accent),
+              Icon(icon, size: 14, color: accent),
               const SizedBox(width: 6),
               Text(
-                call.name.toUpperCase(),
+                toolLabel,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: accent,
                 ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                call.parameters.entries.map((e) => '${e.key}: ${e.value}').join(', '),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -377,10 +389,72 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
               ],
             ),
           ),
+          if (result.content.isNotEmpty && result.title != result.content)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                result.content,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+                maxLines: 10,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           if (result.diff != null) _buildDiffPreview(result.diff!),
         ],
       ),
     );
+  }
+
+  IconData _toolIcon(String toolId) {
+    switch (toolId) {
+      case 'read_file':
+      case 'write_file':
+      case 'edit_file':
+        return Icons.description;
+      case 'list_directory':
+        return Icons.folder_open;
+      case 'shell':
+        return Icons.terminal;
+      case 'search_files':
+        return Icons.search;
+      case 'grep':
+        return Icons.find_in_page;
+      default:
+        return Icons.build_circle_outlined;
+    }
+  }
+
+  String _toolLabel(String toolId) {
+    switch (toolId) {
+      case 'read_file':
+        return 'READ';
+      case 'write_file':
+        return 'WRITE';
+      case 'edit_file':
+        return 'EDIT';
+      case 'list_directory':
+        return 'LIST';
+      case 'shell':
+        return 'SHELL';
+      case 'search_files':
+        return 'SEARCH';
+      case 'grep':
+        return 'GREP';
+      default:
+        return toolId.toUpperCase();
+    }
   }
 
   Widget _buildDiffPreview(DiffInfo diff) {
@@ -614,7 +688,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Ctrl+Enter to send',
+            'Enter to send  ·  Ctrl+Enter for newline',
             style: TextStyle(
               fontSize: 10,
               color: Theme.of(context).textTheme.bodySmall?.color,

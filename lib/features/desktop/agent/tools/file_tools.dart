@@ -205,8 +205,7 @@ class WriteFileTool extends AgentTool {
       final fullPath = path.startsWith('/') || path.contains(':') ? path : '${context.workingDirectory}/$path';
       final file = File(fullPath);
 
-      final dirPath = fullPath.substring(0, fullPath.lastIndexOf(Platform.pathSeparator));
-      final dir = Directory(dirPath);
+      final dir = file.parent;
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }
@@ -259,7 +258,7 @@ class EditFileTool extends AgentTool {
         'type': 'string',
         'description': 'Replacement text',
       },
-      'replaceAll': {
+      'replaceAllOccurrences': {
         'type': 'boolean',
         'description': 'Replace all occurrences',
       },
@@ -273,7 +272,7 @@ class EditFileTool extends AgentTool {
       final path = params['path'] as String;
       final oldString = params['oldString'] as String;
       final newString = params['newString'] as String;
-      final replaceAll = params['replaceAll'] as bool? ?? false;
+      final replaceAllOccurrences = params['replaceAllOccurrences'] as bool? ?? false;
 
       FilePathSecurity.sandboxPath(path, context.workingDirectory);
 
@@ -290,7 +289,7 @@ class EditFileTool extends AgentTool {
         return ToolResult.failure('Text not found', 'Could not find the specified text in $path');
       }
 
-      if (replaceAll) {
+      if (replaceAllOccurrences) {
         content = content.replaceAll(oldString, newString);
       } else {
         content = content.replaceFirst(oldString, newString);
@@ -301,7 +300,7 @@ class EditFileTool extends AgentTool {
       return ToolResult.success(
         'File edited',
         'Successfully edited $path',
-        data: {'path': path, 'replaceAll': replaceAll},
+        data: {'path': path, 'replaceAllOccurrences': replaceAllOccurrences},
       );
     } on SecurityException catch (e) {
       return ToolResult.failure('Access denied', e.message);
