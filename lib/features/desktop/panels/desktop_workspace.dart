@@ -385,71 +385,70 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
     );
   }
 
-                Widget _buildEditorTabs() {
-                  return Container(
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2D2D2D),
-                      border: Border(bottom: BorderSide(color: Color(0xFF3C3C3C))),
-                    ),
-                    child: Row(
-                      children: [
-                        _buildEditorTab(null, 'Chat', Icons.chat),
-                        ..._openFiles.map((f) => _buildEditorTab(f, f.split(Platform.pathSeparator).last, null)),
-                        const Spacer(),
-                      ],
-                    ),
-                  );
-                }
+  Widget _buildEditorTabs() {
+    return Container(
+      height: 36,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2D2D2D),
+        border: Border(bottom: BorderSide(color: Color(0xFF3C3C3C))),
+      ),
+      child: Row(
+        children: [
+          _buildEditorTab(null, 'Chat', Icons.chat),
+          ..._openFiles.map((f) => _buildEditorTab(f, f.split(Platform.pathSeparator).last, null)),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
 
-                Widget _buildEditorTab(String? filePath, String label, IconData? icon) {
-                  final isActive = (filePath == null && _activeFile == null) || (filePath != null && _activeFile == filePath);
-                  return GestureDetector(
-                    onTap: () => setState(() => _activeFile = filePath),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: isActive ? const Color(0xFF1E1E1E) : Colors.transparent,
-                        border: Border(
-                          top: BorderSide(color: isActive ? const Color(0xFFFFA726) : Colors.transparent, width: 1),
-                          right: const BorderSide(color: Color(0xFF3C3C3C), width: 1),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (icon != null) Icon(icon, size: 12, color: isActive ? const Color(0xFFFFA726) : const Color(0xFF858585)),
-                          if (icon != null) const SizedBox(width: 6),
-                          Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isActive ? const Color(0xFFCCCCCC) : const Color(0xFF858585),
-                            ),
-                          ),
-                          if (filePath != null) ...[
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onTap: () => _closeFile(filePath),
-                              child: Icon(Icons.close, size: 12, color: isActive ? const Color(0xFFCCCCCC) : Colors.transparent),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                }
+  Widget _buildEditorTab(String? filePath, String label, IconData? icon) {
+    final isActive = (filePath == null && _activeFile == null) || (filePath != null && _activeFile == filePath);
+    return GestureDetector(
+      onTap: () => setState(() => _activeFile = filePath),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 36,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF1E1E1E) : Colors.transparent,
+          border: Border(
+            top: BorderSide(color: isActive ? const Color(0xFFFFA726) : Colors.transparent, width: 1),
+            right: const BorderSide(color: Color(0xFF3C3C3C), width: 1),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) Icon(icon, size: 12, color: isActive ? const Color(0xFFFFA726) : const Color(0xFF858585)),
+            if (icon != null) const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isActive ? const Color(0xFFCCCCCC) : const Color(0xFF858585),
+              ),
+            ),
+            if (filePath != null) ...[
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => _closeFile(filePath),
+                child: Icon(Icons.close, size: 12, color: isActive ? const Color(0xFFCCCCCC) : Colors.transparent),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-                void _closeFile(String path) {
-                  setState(() {
-                    _openFiles.remove(path);
-                    if (_activeFile == path) {
-                      _activeFile = _openFiles.isNotEmpty ? _openFiles.last : null;
-                    }
-                  });
-                }
-
+  void _closeFile(String path) {
+    setState(() {
+      _openFiles.remove(path);
+      if (_activeFile == path) {
+        _activeFile = _openFiles.isNotEmpty ? _openFiles.last : null;
+      }
+    });
+  }
 
   Widget _buildTitleBar() {
     return Container(
