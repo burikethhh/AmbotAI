@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../shared/theme/theme_colors.dart';
+import '../language_registry.dart';
 import '../programmer_types.dart';
 
 class CodeEditorPanel extends StatefulWidget {
@@ -65,25 +66,16 @@ class _CodeEditorPanelState extends State<CodeEditorPanel> {
 
   Color _fileTabColor(String filename, bool isSelected) {
     if (!isSelected) return Colors.transparent;
-    final ext = filename.contains('.')
-        ? filename.substring(filename.lastIndexOf('.'))
-        : '';
-    switch (ext) {
-      case '.html': return const Color(0xFFE44D26);
-      case '.css': return const Color(0xFF1572B6);
-      case '.js': return const Color(0xFFF7DF1E);
-      default: return widget.themeColors.isDark
-          ? const Color(0xFF333333)
-          : const Color(0xFFDDDDDD);
-    }
+    final config = LanguageRegistry.findByFilename(filename);
+    return config?.tabColor ?? (widget.themeColors.isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFDDDDDD));
   }
 
   Color _fileTabTextColor(String filename, bool isSelected) {
     if (!isSelected) return widget.themeColors.textSecondary;
-    final ext = filename.contains('.')
-        ? filename.substring(filename.lastIndexOf('.'))
-        : '';
-    return ext == '.js' ? Colors.black : Colors.white;
+    final config = LanguageRegistry.findByFilename(filename);
+    return config?.tabTextColor ?? Colors.white;
   }
 
   @override
@@ -191,15 +183,8 @@ class _CodeEditorPanelState extends State<CodeEditorPanel> {
   }
 
   IconData _fileIcon(String filename) {
-    final ext = filename.contains('.')
-        ? filename.substring(filename.lastIndexOf('.'))
-        : '';
-    switch (ext) {
-      case '.html': return Icons.code;
-      case '.css': return Icons.palette_outlined;
-      case '.js': return Icons.javascript;
-      default: return Icons.insert_drive_file_outlined;
-    }
+    final config = LanguageRegistry.findByFilename(filename);
+    return config?.fileIcon ?? Icons.insert_drive_file_outlined;
   }
 
   Widget _buildLineNumbers(ThemeColors c, bool isDark) {

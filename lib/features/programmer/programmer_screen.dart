@@ -13,42 +13,24 @@ import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_typography.dart';
 import '../../shared/theme/theme_colors.dart';
 import 'highlighted_code_controller.dart';
+import 'language_registry.dart';
 import 'programmer_store.dart';
 import 'programmer_types.dart';
 import 'widgets/chat_panel.dart';
 import 'widgets/code_editor_panel.dart';
 import 'widgets/preview_panel.dart';
 
-const String defaultHtml = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Project</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>Hello, World!</h1>
-  <p>Start editing or ask the AI to teach you something!</p>
-  <script src="script.js"></script>
-</body>
-</html>''';
-
-const String defaultCss = '''body {
-  font-family: system-ui, sans-serif;
-  padding: 20px;
-  background: #f5f5f5;
-  color: #333;
+List<ProjectFile> _defaultProjectForLang(LanguageConfig lang) {
+  return [
+    ProjectFile(
+      filename: lang.defaultFilename,
+      content: lang.defaultContent ?? '',
+      language: lang.id,
+    ),
+  ];
 }
-h1 { color: #2c3e50; }''';
 
-const String defaultJs = '''console.log("Hello from Ambot AI!");''';
-
-final List<ProjectFile> defaultProject = [
-  const ProjectFile(filename: 'index.html', content: defaultHtml, language: 'html'),
-  const ProjectFile(filename: 'style.css', content: defaultCss, language: 'css'),
-  const ProjectFile(filename: 'script.js', content: defaultJs, language: 'javascript'),
-];
+final List<ProjectFile> defaultProject = _defaultProjectForLang(LanguageRegistry.fallback());
 
 class ProgrammerScreen extends ConsumerStatefulWidget {
   const ProgrammerScreen({super.key});
@@ -73,12 +55,16 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   Timer? _saveTimer;
   NvidiaModel _selectedProgrammerModel = NvidiaModelCatalog.nemotron3Super;
   bool _showModelSelector = false;
+  LanguageConfig _selectedLanguage = LanguageRegistry.fallback();
 
   @override
   void initState() {
     super.initState();
     final saved = ProgrammerStore.instance.loadCurrentProject();
     _projectFiles = saved != null ? List.from(saved) : List.from(defaultProject);
+    if (_projectFiles.isNotEmpty) {
+      _selectedLanguage = LanguageRegistry.findByFilename(_projectFiles.first.filename) ?? LanguageRegistry.fallback();
+    }
     _codeController = HighlightedCodeController(
       text: _currentFileContent,
       language: _currentFileLanguage,
@@ -87,9 +73,8 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     _messages.add(ChatMessage(
       role: 'ai',
       content:
-          'Welcome to the Programmer! I can teach you HTML, CSS, and JavaScript. '
-          'This IDE supports separate .html, .css, and .js files. '
-          'Try asking me to create a project for you!',
+          'Welcome to the Programmer! I can help you code in ${LanguageRegistry.all.map((l) => l.name).join(", ")}. '
+          'Pick a language from the selector above or just ask me to build something!',
     ));
   }
 
@@ -312,26 +297,32 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
       final currentFiles = _projectFiles.map((f) =>
           '// file: ${f.filename}\n${f.content}').join('\n\n');
 
+      final langNames = LanguageRegistry.all.map((l) => l.name).join(', ');
       final appKnowledge = AppKnowledge.buildContext(message);
       final systemPrompt =
-          'You are an expert web developer and tutor. You teach HTML, CSS, and JavaScript by building projects.$appKnowledge\n\n'
+          'You are an expert programmer and tutor. You help users code in any language: $langNames.$appKnowledge\n\n'
           'IMPORTANT: Always output SEPARATE files using this format:\n'
+          '```<language>\n'
+          '// file: <filename>\n'
+          '<code>\n'
+          '```\n\n'
+          'Examples:\n'
+          '```python\n'
+          '# file: main.py\n'
+          'print("Hello World")\n'
+          '```\n'
+          '```javascript\n'
+          '// file: index.js\n'
+          'console.log("Hello World");\n'
+          '```\n'
           '```html\n'
           '// file: index.html\n'
           '<!DOCTYPE html>...\n'
-          '```\n'
-          '```css\n'
-          '// file: style.css\n'
-          'body { ... }\n'
-          '```\n'
-          '```javascript\n'
-          '// file: script.js\n'
-          'console.log(...);\n'
           '```\n\n'
           'The current project has these files:\n'
           '$currentFiles\n\n'
-          'When suggesting changes, output the COMPLETE updated files with the // file: marker.\n'
-          'Use modern CSS (flexbox, grid, custom properties) and clean JavaScript (ES6+).\n'
+          'When suggesting changes, output the COMPLETE updated files with the file: marker.\n'
+          'Use modern best practices for the language.\n'
           'Explain concepts simply with analogies for beginners.\n'
           'Keep examples focused on one concept at a time.';
 
@@ -452,34 +443,22 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
   }
 
   String _filenameFromLanguage(String lang) {
-    switch (lang) {
-      case 'html': return 'index.html';
-      case 'css': return 'style.css';
-      case 'javascript':
-      case 'js': return 'script.js';
-      default: return 'index.html';
-    }
+    final config = LanguageRegistry.findById(lang);
+    return config?.defaultFilename ?? 'index.html';
   }
 
   String _langFromExt(String ext) {
-    switch (ext) {
-      case '.html': return 'html';
-      case '.css': return 'css';
-      case '.js': return 'javascript';
-      default: return 'html';
-    }
+    final config = LanguageRegistry.findByExtension(ext);
+    return config?.id ?? 'html';
   }
 
   void _insertCode(String code) {
-    final htmlIdx = _projectFiles.indexWhere((f) => f.filename.endsWith('.html'));
-    if (htmlIdx != -1) {
-      _projectFiles[htmlIdx] = _projectFiles[htmlIdx].copyWith(content: code);
-      if (_selectedFileIndex == htmlIdx) {
-        _codeController.text = code;
-      }
-      _previewKey++;
-      _switchToCode();
-    }
+    if (_projectFiles.isEmpty) return;
+    final idx = _selectedFileIndex.clamp(0, _projectFiles.length - 1);
+    _projectFiles[idx] = _projectFiles[idx].copyWith(content: code);
+    _codeController.text = code;
+    _previewKey++;
+    _switchToCode();
     _autoSave();
   }
 
@@ -517,7 +496,7 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         content: TextField(
           controller: nameController,
           decoration: const InputDecoration(
-            hintText: 'filename.html / filename.css / filename.js',
+            hintText: 'main.py / index.html / script.js / Main.java',
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -544,6 +523,16 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     );
   }
 
+  void _switchLanguage(LanguageConfig lang) {
+    setState(() {
+      _selectedLanguage = lang;
+      if (_projectFiles.isEmpty) {
+        _projectFiles.addAll(_defaultProjectForLang(lang));
+        _selectFile(0);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = ThemeColors.of(context);
@@ -564,7 +553,13 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
     return AppBar(
       backgroundColor: c.surfaceColor,
       elevation: 0,
-      title: Text('PROGRAMMER', style: AppTypography.headlineSmall(c.textPrimary)),
+      title: Row(
+        children: [
+          Text('PROGRAMMER', style: AppTypography.headlineSmall(c.textPrimary)),
+          const SizedBox(width: 12),
+          _buildLanguageDropdown(c),
+        ],
+      ),
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: c.textPrimary),
         tooltip: 'Back',
@@ -593,6 +588,50 @@ class _ProgrammerScreenState extends ConsumerState<ProgrammerScreen> {
         ),
         const SizedBox(width: 8),
       ],
+    );
+  }
+
+  Widget _buildLanguageDropdown(ThemeColors c) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: c.borderColor),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedLanguage.id,
+          isDense: true,
+          dropdownColor: c.surfaceColor,
+          style: AppTypography.labelSmall(c.textPrimary),
+          items: LanguageRegistry.all.map((lang) {
+            return DropdownMenuItem(
+              value: lang.id,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: lang.tabColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(lang.name),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            final lang = LanguageRegistry.findById(id);
+            if (lang != null) _switchLanguage(lang);
+          },
+        ),
+      ),
     );
   }
 

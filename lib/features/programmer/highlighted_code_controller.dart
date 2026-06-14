@@ -47,12 +47,12 @@ class HighlightedCodeController extends TextEditingController {
 
   String _langForHighlight(String lang) {
     switch (lang) {
-      case 'javascript':
-        return 'javascript';
-      case 'css':
-        return 'css';
       case 'html':
         return 'xml';
+      case 'shell':
+        return 'bash';
+      case 'yaml':
+        return 'yaml';
       default:
         return lang;
     }
