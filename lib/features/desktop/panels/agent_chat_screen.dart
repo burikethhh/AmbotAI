@@ -9,7 +9,7 @@ class AgentMessage {
   final String content;
   final DateTime timestamp;
   final ToolCall? toolCall;
-  final ToolResult? toolResult;
+  final ChatToolResult? toolResult;
   final bool isStreaming;
 
   const AgentMessage({
@@ -35,13 +35,13 @@ class ToolCall {
   });
 }
 
-class ToolResult {
+class ChatToolResult {
   final String title;
   final String content;
   final bool success;
   final DiffInfo? diff;
 
-  const ToolResult({
+  const ChatToolResult({
     required this.title,
     required this.content,
     this.success = true,
@@ -346,7 +346,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     );
   }
 
-  Widget _buildToolResultBlock(ToolResult result) {
+  Widget _buildToolResultBlock(ChatToolResult result) {
     final color = result.success ? Colors.green : Colors.red;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
