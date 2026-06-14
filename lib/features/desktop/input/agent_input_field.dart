@@ -188,10 +188,7 @@ class _AgentInputFieldState extends State<AgentInputField> {
     final lastSpace = textBeforeCursor.lastIndexOf(' ');
     final currentWordStart = lastSpace == -1 ? 0 : lastSpace + 1;
 
-    final newText = textBeforeCursor.substring(0, currentWordStart) +
-        completion +
-        ' ' +
-        textAfterCursor;
+    final newText = '${textBeforeCursor.substring(0, currentWordStart)}$completion $textAfterCursor';
 
     widget.controller.text = newText;
     widget.controller.selection = TextSelection.collapsed(

@@ -323,7 +323,7 @@ class SearchFilesTool extends AgentTool {
     regexPattern = regexPattern.replaceAll('.', '\\.');
     regexPattern = regexPattern.replaceAll('*', '.*');
     regexPattern = regexPattern.replaceAll('?', '.');
-    final regex = RegExp('^' + regexPattern + '\$', caseSensitive: false);
+    final regex = RegExp('^$regexPattern\$', caseSensitive: false);
     return regex.hasMatch(name);
   }
 }
@@ -425,7 +425,7 @@ class GrepTool extends AgentTool {
     regexPattern = regexPattern.replaceAll('.', '\\.');
     regexPattern = regexPattern.replaceAll('*', '.*');
     regexPattern = regexPattern.replaceAll('?', '.');
-    final regex = RegExp('^' + regexPattern + '\$', caseSensitive: false);
+    final regex = RegExp('^$regexPattern\$', caseSensitive: false);
     return regex.hasMatch(name);
   }
 }

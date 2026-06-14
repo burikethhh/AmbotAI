@@ -15,7 +15,7 @@ class DesktopWorkspace extends StatefulWidget {
 class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   final List<AgentSession> _sessions = [];
   int _activeSessionIndex = 0;
-  bool _sidebarCollapsed = false;
+  final bool _sidebarCollapsed = false;
   bool _contextPanelCollapsed = false;
   bool _terminalVisible = false;
 

@@ -17,7 +17,7 @@ class AmbotDesktopApp extends ConsumerStatefulWidget {
 
 class _AmbotDesktopAppState extends ConsumerState<AmbotDesktopApp>
     with WidgetsBindingObserver {
-  bool _useWorkspace = true;
+  final bool _useWorkspace = true;
 
   @override
   void initState() {
