@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/app_version.dart';
+import '../ai/local_ai_manager.dart';
+import '../agent/agent_engine.dart';
+import '../agent/agent_tool.dart';
+import '../agent/permission_manager.dart';
+import '../agent/tools/file_tools.dart';
+import '../agent/tools/shell_tools.dart';
 import 'resizable_panel.dart';
 import 'session_tab_bar.dart';
 import 'agent_chat_screen.dart';
@@ -33,9 +39,14 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   final List<ContextFile> _contextFiles = [];
   final List<AgentLogEntry> _logs = [];
 
+  late final LocalAIManager _aiManager;
+  late final AgentEngine _agentEngine;
+  late final PermissionManager _permissionManager;
+
   @override
   void initState() {
     super.initState();
+    _initAgent();
     _loadLayout();
     _addSession('New Session', 'build');
     _logs.add(AgentLogEntry(
@@ -43,6 +54,66 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       level: 'info',
       message: 'Workspace initialized',
     ));
+  }
+
+  void _initAgent() {
+    _aiManager = LocalAIManager();
+    _permissionManager = PermissionManager();
+
+    final registry = ToolRegistry();
+    registry.registerAll([
+      ReadFileTool(),
+      WriteFileTool(),
+      EditFileTool(),
+      ListDirectoryTool(),
+      ShellTool(),
+      SearchFilesTool(),
+      GrepTool(),
+    ]);
+
+    _agentEngine = AgentEngine(
+      registry: registry,
+      permissionManager: _permissionManager,
+    );
+
+    _aiManager.addListener(_onAiStateChanged);
+    _aiManager.initialize();
+
+    _logs.add(AgentLogEntry(
+      time: _timeNow(),
+      level: 'info',
+      message: 'Agent engine initialized with ${registry.all.length} tools',
+    ));
+  }
+
+  void _onAiStateChanged() {
+    if (!mounted) return;
+    if (_aiManager.state == ModelState.ready && _aiManager.engine != null) {
+      _agentEngine.setLlm(_aiManager.engine);
+      setState(() {
+        _logs.add(AgentLogEntry(
+          time: _timeNow(),
+          level: 'success',
+          message: 'Local AI model loaded: ${_aiManager.currentModel?.name ?? "unknown"}',
+        ));
+      });
+    } else if (_aiManager.state == ModelState.error) {
+      setState(() {
+        _logs.add(AgentLogEntry(
+          time: _timeNow(),
+          level: 'error',
+          message: 'AI error: ${_aiManager.error ?? "unknown"}',
+        ));
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _aiManager.removeListener(_onAiStateChanged);
+    _aiManager.dispose();
+    _permissionManager.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLayout() async {
@@ -113,32 +184,84 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
         message: 'User: $text',
       ));
     });
-    _simulateAgentResponse(text);
+    _runAgent(text);
   }
 
-  void _simulateAgentResponse(String userMessage) {
-    Future.delayed(const Duration(seconds: 2), () {
+  Future<void> _runAgent(String userMessage) async {
+    try {
+      final execution = await _agentEngine.execute(userMessage);
+
       if (!mounted) return;
+
+      // Add tool call messages
+      for (final step in execution.steps) {
+        setState(() {
+          _messages.add(AgentMessage(
+            id: 'tool_${step.toolId}_${step.timestamp.millisecondsSinceEpoch}',
+            role: MessageRole.agent,
+            content: '',
+            timestamp: step.timestamp,
+            toolCall: ToolCall(
+              name: step.toolId,
+              parameters: step.parameters,
+              thinking: step.thinking,
+            ),
+          ));
+
+          if (step.result != null) {
+            _messages.add(AgentMessage(
+              id: 'result_${step.toolId}_${step.timestamp.millisecondsSinceEpoch}',
+              role: MessageRole.tool,
+              content: step.result!.title,
+              timestamp: step.timestamp,
+              toolResult: ChatToolResult(
+                title: step.result!.title,
+                content: step.result!.content,
+                success: step.result!.success,
+              ),
+            ));
+          }
+
+          _logs.add(AgentLogEntry(
+            time: _timeNow(),
+            level: step.result?.success == true ? 'success' : 'error',
+            message: '${step.toolId}: ${step.result?.title ?? "pending"}',
+          ));
+        });
+      }
+
+      // Add final answer
       setState(() {
         _messages.add(AgentMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: 'answer_${execution.id}',
           role: MessageRole.agent,
-          content: 'Processing your request: "$userMessage"',
+          content: execution.finalAnswer ?? 'No response generated.',
           timestamp: DateTime.now(),
-          toolCall: ToolCall(
-            name: 'analyze',
-            parameters: {'query': userMessage},
-            thinking: 'Analyzing request...',
-          ),
         ));
         _isStreaming = false;
         _logs.add(AgentLogEntry(
           time: _timeNow(),
           level: 'success',
-          message: 'Agent processed request',
+          message: 'Agent completed in ${execution.steps.length} steps',
         ));
       });
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(AgentMessage(
+          id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+          role: MessageRole.system,
+          content: 'Error: $e',
+          timestamp: DateTime.now(),
+        ));
+        _isStreaming = false;
+        _logs.add(AgentLogEntry(
+          time: _timeNow(),
+          level: 'error',
+          message: 'Agent error: $e',
+        ));
+      });
+    }
   }
 
   String _timeNow() {
