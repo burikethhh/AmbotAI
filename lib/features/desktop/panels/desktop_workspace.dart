@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/app_version.dart';
 import 'resizable_panel.dart';
 import 'session_tab_bar.dart';
@@ -13,11 +14,19 @@ class DesktopWorkspace extends StatefulWidget {
 }
 
 class _DesktopWorkspaceState extends State<DesktopWorkspace> {
+  static const _kSidebarCollapsed = 'ws_sidebar_collapsed';
+  static const _kContextPanelRatio = 'ws_context_ratio';
+  static const _kContextCollapsed = 'ws_context_collapsed';
+  static const _kTerminalVisible = 'ws_terminal_visible';
+  static const _kFocusMode = 'ws_focus_mode';
+
   final List<AgentSession> _sessions = [];
   int _activeSessionIndex = 0;
-  final bool _sidebarCollapsed = false;
+  bool _sidebarCollapsed = false;
   bool _contextPanelCollapsed = false;
   bool _terminalVisible = false;
+  bool _focusMode = false;
+  double _contextRatio = 0.7;
 
   final List<AgentMessage> _messages = [];
   bool _isStreaming = false;
@@ -27,12 +36,45 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
   @override
   void initState() {
     super.initState();
+    _loadLayout();
     _addSession('New Session', 'build');
     _logs.add(AgentLogEntry(
       time: '00:00',
       level: 'info',
       message: 'Workspace initialized',
     ));
+  }
+
+  Future<void> _loadLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _sidebarCollapsed = prefs.getBool(_kSidebarCollapsed) ?? false;
+      _contextRatio = prefs.getDouble(_kContextPanelRatio) ?? 0.7;
+      _contextPanelCollapsed = prefs.getBool(_kContextCollapsed) ?? false;
+      _terminalVisible = prefs.getBool(_kTerminalVisible) ?? false;
+      _focusMode = prefs.getBool(_kFocusMode) ?? false;
+    });
+  }
+
+  Future<void> _saveLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSidebarCollapsed, _sidebarCollapsed);
+    await prefs.setDouble(_kContextPanelRatio, _contextRatio);
+    await prefs.setBool(_kContextCollapsed, _contextPanelCollapsed);
+    await prefs.setBool(_kTerminalVisible, _terminalVisible);
+    await prefs.setBool(_kFocusMode, _focusMode);
+  }
+
+  void _toggleFocusMode() {
+    setState(() {
+      _focusMode = !_focusMode;
+      if (_focusMode) {
+        _sidebarCollapsed = true;
+        _contextPanelCollapsed = true;
+        _terminalVisible = false;
+      }
+    });
+    _saveLayout();
   }
 
   void _addSession(String title, String agentType) {
@@ -111,53 +153,69 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
       body: Column(
         children: [
           _buildTitleBar(),
-          SessionTabBar(
-            sessions: _sessions,
-            activeIndex: _activeSessionIndex,
-            onSelect: (i) => setState(() => _activeSessionIndex = i),
-            onClose: _closeSession,
-            onNewSession: () => _addSession('Session ${_sessions.length + 1}', 'build'),
-          ),
+          if (!_focusMode)
+            SessionTabBar(
+              sessions: _sessions,
+              activeIndex: _activeSessionIndex,
+              onSelect: (i) => setState(() => _activeSessionIndex = i),
+              onClose: _closeSession,
+              onNewSession: () => _addSession('Session ${_sessions.length + 1}', 'build'),
+            ),
           Expanded(
             child: Row(
               children: [
-                if (!_sidebarCollapsed) _buildSidebar(),
+                if (!_sidebarCollapsed && !_focusMode) _buildSidebar(),
                 Expanded(
-                  child: ResizablePanel(
-                    axis: PanelAxis.horizontal,
-                    initialRatio: 0.7,
-                    minRatio: 0.4,
-                    maxRatio: 0.9,
-                    collapsible: true,
-                    collapsed: _contextPanelCollapsed,
-                    onToggleCollapse: () => setState(() => _contextPanelCollapsed = !_contextPanelCollapsed),
-                    panel: ContextPanel(
-                      files: _contextFiles,
-                      logs: _logs,
-                      inputTokens: 2340,
-                      outputTokens: 890,
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: AgentChatScreen(
-                            messages: _messages,
-                            onSendMessage: _sendMessage,
-                            isStreaming: _isStreaming,
-                            agentType: _sessions.isNotEmpty
-                                ? _sessions[_activeSessionIndex].agentType
-                                : 'build',
+                  child: _focusMode
+                      ? AgentChatScreen(
+                          messages: _messages,
+                          onSendMessage: _sendMessage,
+                          isStreaming: _isStreaming,
+                          agentType: _sessions.isNotEmpty
+                              ? _sessions[_activeSessionIndex].agentType
+                              : 'build',
+                        )
+                      : ResizablePanel(
+                          axis: PanelAxis.horizontal,
+                          initialRatio: _contextRatio,
+                          minRatio: 0.4,
+                          maxRatio: 0.9,
+                          collapsible: true,
+                          collapsed: _contextPanelCollapsed,
+                          onToggleCollapse: () {
+                            setState(() => _contextPanelCollapsed = !_contextPanelCollapsed);
+                            _saveLayout();
+                          },
+                          onRatioChanged: (ratio) {
+                            _contextRatio = ratio;
+                          },
+                          panel: ContextPanel(
+                            files: _contextFiles,
+                            logs: _logs,
+                            inputTokens: 2340,
+                            outputTokens: 890,
+                          ),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: AgentChatScreen(
+                                  messages: _messages,
+                                  onSendMessage: _sendMessage,
+                                  isStreaming: _isStreaming,
+                                  agentType: _sessions.isNotEmpty
+                                      ? _sessions[_activeSessionIndex].agentType
+                                      : 'build',
+                                ),
+                              ),
+                              if (_terminalVisible) _buildTerminal(),
+                            ],
                           ),
                         ),
-                        if (_terminalVisible) _buildTerminal(),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
           ),
-          _buildStatusBar(),
+          if (!_focusMode) _buildStatusBar(),
         ],
       ),
     );
@@ -275,8 +333,14 @@ class _DesktopWorkspaceState extends State<DesktopWorkspace> {
           _buildSidebarButton(Icons.bug_report, 'Debug', () {}),
           _buildSidebarButton(Icons.description, 'Document', () {}),
           const Spacer(),
+          _buildSidebarButton(
+            _focusMode ? Icons.fullscreen_exit : Icons.fullscreen,
+            _focusMode ? 'Exit Focus' : 'Focus Mode',
+            _toggleFocusMode,
+          ),
           _buildSidebarButton(Icons.terminal, 'Terminal', () {
             setState(() => _terminalVisible = !_terminalVisible);
+            _saveLayout();
           }),
           _buildSidebarButton(Icons.settings, 'Settings', () {}),
           const SizedBox(height: 8),
